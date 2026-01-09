@@ -10,6 +10,7 @@ export interface Todo {
   category: string;
   dueDate?: string;
   createdAt: number;
+  sourceId?: string; // ID of the reporter who owns this task
 }
 
 interface TodoContextType {
@@ -19,12 +20,15 @@ interface TodoContextType {
   deleteTodo: (id: string) => void;
   updateTodo: (id: string, updates: Partial<Omit<Todo, 'id' | 'createdAt'>>) => void;
   clearCompleted: () => void;
-  setTodos: (todos: Todo[]) => void;
+  setTodos: (todos: Todo[] | ((prev: Todo[]) => Todo[])) => void;
+  filterSource: string | null;
+  setFilterSource: (sourceId: string | null) => void;
 }
 
 const TodoContext = createContext<TodoContextType | undefined>(undefined);
 
 export function TodoProvider({ children }: { children: React.ReactNode }) {
+  const [filterSource, setFilterSource] = useState<string | null>(null);
   const [todos, setTodos] = useState<Todo[]>(() => {
     const saved = localStorage.getItem('super-todos');
     if (saved) {
@@ -128,8 +132,20 @@ export function TodoProvider({ children }: { children: React.ReactNode }) {
     setTodos(prev => prev.filter(todo => !todo.completed));
   };
 
+  const value = {
+    todos,
+    addTodo,
+    toggleTodo,
+    deleteTodo,
+    updateTodo,
+    clearCompleted,
+    setTodos,
+    filterSource,
+    setFilterSource
+  };
+
   return (
-    <TodoContext.Provider value={{ todos, addTodo, toggleTodo, deleteTodo, updateTodo, clearCompleted, setTodos }}>
+    <TodoContext.Provider value={value}>
       {children}
     </TodoContext.Provider>
   );

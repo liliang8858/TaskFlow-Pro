@@ -35,7 +35,7 @@ function StatCard({ type, icon, title, value, children }: StatCardProps) {
   );
 }
 
-export function Stats() {
+export function Stats({ layout = 'horizontal' }: { layout?: 'horizontal' | 'vertical' }) {
   const { todos } = useTodos();
   
   const total = todos.length;
@@ -49,7 +49,10 @@ export function Stats() {
   const strokeDasharray = `${completionRate}, 100`;
 
   return (
-    <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-6 mb-10">
+    <div className={cn(
+      "grid gap-4 mb-10 transition-all",
+      layout === 'horizontal' ? "grid-cols-1 sm:grid-cols-2 lg:grid-cols-4" : "grid-cols-1"
+    )}>
       <StatCard 
         type="total" 
         icon={<Layers className="w-6 h-6" />} 

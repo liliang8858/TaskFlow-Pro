@@ -3,6 +3,7 @@ import { QRCodeSVG } from 'qrcode.react';
 import { TodoProvider } from './context/TodoContext';
 import { TodoInput } from './components/TodoInput';
 import { TodoList } from './components/TodoList';
+import { ReporterList } from './components/ReporterList';
 import { Stats } from './components/Stats';
 import { Header } from './components/Header';
 import { PeerProvider, usePeer } from './context/PeerContext';

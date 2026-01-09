@@ -6,7 +6,7 @@ import { cn } from '../lib/utils';
 import { Inbox } from 'lucide-react';
 
 export function TodoList() {
-  const { todos } = useTodos();
+  const { todos, filterSource } = useTodos();
   const [filter, setFilter] = useState<'all' | 'active' | 'completed'>('all');
   const [categoryFilter, setCategoryFilter] = useState<string | null>(null);
 
@@ -23,7 +23,9 @@ export function TodoList() {
       
       const categoryMatch = categoryFilter ? todo.category === categoryFilter : true;
       
-      return statusMatch && categoryMatch;
+      const sourceMatch = filterSource ? todo.sourceId === filterSource : true;
+      
+      return statusMatch && categoryMatch && sourceMatch;
     }).sort((a, b) => {
         // Sort by completed (active first), then priority (high first), then date
         if (a.completed !== b.completed) return a.completed ? 1 : -1;

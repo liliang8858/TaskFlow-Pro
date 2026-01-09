@@ -14,21 +14,15 @@ export function ConnectModal({ isOpen, onClose }: ConnectModalProps) {
   const [isConnecting, setIsConnecting] = useState(false);
 
   const handleConnect = () => {
-    if (!hostId.trim()) return;
+    const cleanId = hostId.trim().replace(/\s/g, '');
+    if (!cleanId) return;
     setIsConnecting(true);
-    // Timeout to simulate connection delay or wait for callback
-    connectToHost(hostId.trim());
-    
-    // In a real app, we'd wait for connection success event, 
-    // but usePeerSync updates isConnected state.
-    // We can just watch isConnected.
-    
-    // Reset loading state after 3 seconds if not connected (timeout)
+    connectToHost(cleanId);
     setTimeout(() => {
-        if (!isConnected) {
-            setIsConnecting(false);
-        }
-    }, 3000);
+      if (!isConnected) {
+        setIsConnecting(false);
+      }
+    }, 5000); // Increased timeout for better UX
   };
   
   // Close automatically after success
