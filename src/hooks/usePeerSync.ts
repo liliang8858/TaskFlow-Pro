@@ -9,25 +9,25 @@ export function usePeerSync(isHost: boolean = false) {
   const [isConnected, setIsConnected] = useState(false);
   const peerRef = useRef<Peer | null>(null);
   
-  // Flag to prevent infinite loops when updating from remote
-  const isRemoteUpdate = useRef(false);
+  // Track which connection sent the update to avoid echoing back
+  const skipConnectionRef = useRef<string | null>(null);
 
   // Broadcast changes to all connections when todos change locally
   useEffect(() => {
-    // If this change was triggered by a remote update, don't broadcast it back
-    if (isRemoteUpdate.current) {
-      isRemoteUpdate.current = false;
-      return;
-    }
-
     // Only broadcast if we have connections
     if (connections.length > 0) {
       const payload = { type: 'SYNC_TODOS', payload: todos };
       connections.forEach(conn => {
+        // Skip the connection that just sent us this update
+        if (conn.peer === skipConnectionRef.current) {
+          return;
+        }
         if (conn.open) {
           conn.send(payload);
         }
       });
+      // Reset after broadcast attempt
+      skipConnectionRef.current = null;
     }
   }, [todos, connections]);
 
@@ -43,14 +43,7 @@ export function usePeerSync(isHost: boolean = false) {
       });
 
       newPeer.on('connection', (conn) => {
-        // In this simple model, Host accepts everyone. 
-        // Clients typically don't accept incoming connections unless we go mesh.
-        // We'll enforce that only Host accepts connections for now to keep topology simple (Star topology).
-        if (!isHost) {
-            conn.close();
-            return;
-        }
-
+        // Allow all incoming connections to support multi-level reporting (Mesh/Tree topology)
         console.log('Incoming connection:', conn.peer);
         
         conn.on('open', () => {
@@ -61,8 +54,8 @@ export function usePeerSync(isHost: boolean = false) {
 
         conn.on('data', (data: any) => {
            if (data?.type === 'SYNC_TODOS' && Array.isArray(data.payload)) {
-             console.log('Received remote update');
-             isRemoteUpdate.current = true;
+             console.log('Received remote update from', conn.peer);
+             skipConnectionRef.current = conn.peer;
              setTodos(data.payload);
            }
         });
@@ -115,7 +108,7 @@ export function usePeerSync(isHost: boolean = false) {
     conn.on('open', () => {
       console.log('Connected to host');
       setIsConnected(true);
-      setConnections([conn]);
+      setConnections(prev => [...prev, conn]);
       
       // Send local state to host immediately upon connection
       // This allows the "Controller" to push its tasks to the "Screen"
@@ -124,21 +117,21 @@ export function usePeerSync(isHost: boolean = false) {
 
     conn.on('data', (data: any) => {
         if (data?.type === 'SYNC_TODOS' && Array.isArray(data.payload)) {
-            console.log('Client received update from host');
-            isRemoteUpdate.current = true;
+            console.log('Client received update from host', conn.peer);
+            skipConnectionRef.current = conn.peer;
             setTodos(data.payload);
         }
     });
 
     conn.on('close', () => {
         setIsConnected(false);
-        setConnections([]);
+        setConnections(prev => prev.filter(c => c !== conn));
     });
     
     conn.on('error', (err) => {
         console.error('Connection error:', err);
         setIsConnected(false);
-        setConnections([]);
+        setConnections(prev => prev.filter(c => c !== conn));
     });
 
   }, [todos]); // Keep todos dependency so we send latest data on connect

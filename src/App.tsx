@@ -5,11 +5,11 @@ import { TodoInput } from './components/TodoInput';
 import { TodoList } from './components/TodoList';
 import { Stats } from './components/Stats';
 import { Header } from './components/Header';
-import { usePeerSync } from './hooks/usePeerSync';
+import { PeerProvider, usePeer } from './context/PeerContext';
 import { Copy, Wifi } from 'lucide-react';
 
 function DisplayModeContent() {
-  const { peerId, connectionsCount } = usePeerSync(true); // true = isHost
+  const { peerId, connectionsCount } = usePeer();
   const [copied, setCopied] = useState(false);
 
   const handleCopy = () => {
@@ -24,7 +24,7 @@ function DisplayModeContent() {
     <div className="min-h-screen py-8 px-4 md:px-6 max-w-5xl mx-auto font-sans">
       <header className="mb-10 text-center relative">
         <h1 className="text-[32px] font-bold bg-primary-gradient bg-clip-text text-transparent tracking-tighter">
-          TaskFlow Pro <span className="text-base font-normal text-text-sub ml-2 opacity-70">Live Dashboard</span>
+          TaskFlow Pro <span className="text-base font-normal text-text-sub ml-2 opacity-70">汇报概览</span>
         </h1>
         
         {/* Connection Info Card */}
@@ -32,7 +32,7 @@ function DisplayModeContent() {
             <div className="flex flex-col items-center gap-4">
                 <div className="text-sm font-semibold text-text-sub uppercase tracking-wider flex items-center gap-2">
                     <Wifi className={`w-4 h-4 ${connectionsCount > 0 ? 'text-green-500' : 'text-gray-400'}`} />
-                    {connectionsCount > 0 ? `${connectionsCount} 个设备已连接` : '等待远程连接...'}
+                    {connectionsCount > 0 ? `${connectionsCount} 个汇报人已连接` : '等待汇报人连接...'}
                 </div>
                 
                 {peerId ? (
@@ -53,7 +53,7 @@ function DisplayModeContent() {
                             </button>
                          </div>
                          <p className="text-xs text-text-sub text-center">
-                            在控制端点击"连接大屏"，扫描二维码或输入上方ID即可同步
+                            请下级点击"连接汇报对象"，扫描二维码或输入上方ID进行汇报
                          </p>
                     </div>
                 ) : (
@@ -106,7 +106,9 @@ function App() {
 
   return (
     <TodoProvider>
-      {isDisplayMode ? <DisplayModeContent /> : <NormalModeContent />}
+      <PeerProvider>
+        {isDisplayMode ? <DisplayModeContent /> : <NormalModeContent />}
+      </PeerProvider>
     </TodoProvider>
   );
 }

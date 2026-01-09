@@ -5,17 +5,17 @@
 @layer base {
   @font-face {
     font-family: 'MiSans';
-    src: url('https://assets-persist.lovart.ai/agent-static-assets/MiSans-Regular.ttf') format('truetype');
+    src: url('/fonts/MiSans-Regular.ttf') format('truetype');
     font-weight: 400;
   }
   @font-face {
     font-family: 'MiSans';
-    src: url('https://assets-persist.lovart.ai/agent-static-assets/MiSans-Medium.ttf') format('truetype');
+    src: url('/fonts/MiSans-Medium.ttf') format('truetype');
     font-weight: 500;
   }
   @font-face {
     font-family: 'MiSans';
-    src: url('https://assets-persist.lovart.ai/agent-static-assets/MiSans-Bold.ttf') format('truetype');
+    src: url('/fonts/MiSans-Bold.ttf') format('truetype');
     font-weight: 700;
   }
 

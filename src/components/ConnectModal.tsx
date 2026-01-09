@@ -1,6 +1,6 @@
 import { useState } from 'react';
 import { X, Smartphone, ArrowRight, Loader2, CheckCircle2 } from 'lucide-react';
-import { usePeerSync } from '../hooks/usePeerSync';
+import { usePeer } from '../context/PeerContext';
 import { cn } from '../lib/utils';
 
 interface ConnectModalProps {
@@ -10,7 +10,7 @@ interface ConnectModalProps {
 
 export function ConnectModal({ isOpen, onClose }: ConnectModalProps) {
   const [hostId, setHostId] = useState('');
-  const { connectToHost, isConnected, isReady } = usePeerSync(false); // false = isClient
+  const { connectToHost, isConnected, isReady } = usePeer();
   const [isConnecting, setIsConnecting] = useState(false);
 
   const handleConnect = () => {
@@ -58,8 +58,8 @@ export function ConnectModal({ isOpen, onClose }: ConnectModalProps) {
               <Smartphone className="w-5 h-5" />
             </div>
             <div>
-                <h2 className="text-xl font-bold text-gray-800">连接大屏</h2>
-                <p className="text-sm text-gray-500">输入大屏显示的 ID 进行同步</p>
+                <h2 className="text-xl font-bold text-gray-800">连接汇报对象</h2>
+                <p className="text-sm text-gray-500">输入汇报对象的 ID 进行汇报</p>
             </div>
           </div>
           <button 
@@ -74,12 +74,12 @@ export function ConnectModal({ isOpen, onClose }: ConnectModalProps) {
           {!isConnected ? (
               <>
                 <div className="space-y-2">
-                    <label className="text-xs font-semibold text-gray-500 uppercase tracking-wide ml-1">大屏 ID</label>
+                    <label className="text-xs font-semibold text-gray-500 uppercase tracking-wide ml-1">汇报对象 ID</label>
                     <input 
                         type="text" 
                         value={hostId}
                         onChange={(e) => setHostId(e.target.value)}
-                        placeholder="输入大屏 ID (例如: e8f9...)"
+                        placeholder="输入汇报对象 ID (例如: e8f9...)"
                         disabled={!isReady}
                         className="w-full bg-slate-50 border border-slate-200 rounded-xl px-4 py-3 text-sm focus:outline-none focus:ring-2 focus:ring-primary/20 focus:border-primary transition-all font-mono disabled:opacity-50 disabled:cursor-not-allowed"
                     />
@@ -92,7 +92,7 @@ export function ConnectModal({ isOpen, onClose }: ConnectModalProps) {
                 )}
                 <div className="bg-blue-50 text-blue-600 p-3 rounded-xl text-xs flex gap-2">
                     <span className="font-bold">提示:</span>
-                    大屏模式下会显示专属 ID 和二维码。此功能支持跨浏览器和跨设备同步。
+                    汇报对象会提供专属 ID 和二维码。连接后，您的任务将实时同步给汇报对象。
                 </div>
               </>
           ) : (

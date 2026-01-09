@@ -2,14 +2,12 @@ import { useState } from 'react';
 import { CheckSquare, FileText, Monitor, Smartphone } from 'lucide-react';
 import { WeeklyReportModal } from './WeeklyReportModal';
 import { ConnectModal } from './ConnectModal';
+import { ShareIdModal } from './ShareIdModal';
 
 export function Header() {
   const [isReportOpen, setIsReportOpen] = useState(false);
   const [isConnectOpen, setIsConnectOpen] = useState(false);
-
-  const openDisplayMode = () => {
-    window.open(window.location.pathname + '?mode=display', '_blank', 'noopener,noreferrer');
-  };
+  const [isShareOpen, setIsShareOpen] = useState(false);
 
   return (
     <>
@@ -27,19 +25,19 @@ export function Header() {
           <button 
               onClick={() => setIsConnectOpen(true)}
               className="flex items-center gap-2 px-4 py-2 rounded-full bg-white text-text-main text-sm font-semibold shadow-[0_4px_15px_rgba(0,0,0,0.05)] hover:bg-gray-50 transition-all duration-200 hover:-translate-y-0.5 border border-transparent hover:border-slate-100 cursor-pointer"
-              title="连接远程大屏"
+              title="连接汇报对象"
           >
               <Smartphone className="w-4 h-4 text-purple-500" />
-              <span className="hidden sm:inline">连接大屏</span>
+              <span className="hidden sm:inline">连接汇报对象</span>
           </button>
 
           <button 
-              onClick={openDisplayMode}
+              onClick={() => setIsShareOpen(true)}
               className="flex items-center gap-2 px-4 py-2 rounded-full bg-white text-text-main text-sm font-semibold shadow-[0_4px_15px_rgba(0,0,0,0.05)] hover:bg-gray-50 transition-all duration-200 hover:-translate-y-0.5 border border-transparent hover:border-slate-100 cursor-pointer"
-              title="打开展示大屏模式"
+              title="接收汇报"
           >
               <Monitor className="w-4 h-4 text-blue-500" />
-              <span className="hidden sm:inline">大屏模式</span>
+              <span className="hidden sm:inline">接收汇报</span>
           </button>
 
           <button 
@@ -60,6 +58,7 @@ export function Header() {
 
       <WeeklyReportModal isOpen={isReportOpen} onClose={() => setIsReportOpen(false)} />
       <ConnectModal isOpen={isConnectOpen} onClose={() => setIsConnectOpen(false)} />
+      <ShareIdModal isOpen={isShareOpen} onClose={() => setIsShareOpen(false)} />
     </>
   );
 }
