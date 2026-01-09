@@ -19,6 +19,7 @@ interface TodoContextType {
   deleteTodo: (id: string) => void;
   updateTodo: (id: string, updates: Partial<Omit<Todo, 'id' | 'createdAt'>>) => void;
   clearCompleted: () => void;
+  setTodos: (todos: Todo[]) => void;
 }
 
 const TodoContext = createContext<TodoContextType | undefined>(undefined);
@@ -56,7 +57,43 @@ export function TodoProvider({ children }: { children: React.ReactNode }) {
 
   useEffect(() => {
     localStorage.setItem('super-todos', JSON.stringify(todos));
+    // Broadcast change to other tabs
+    const channel = new BroadcastChannel('todo_channel');
+    channel.postMessage({ type: 'UPDATE_TODOS', payload: todos });
+    channel.close();
   }, [todos]);
+
+  useEffect(() => {
+    const channel = new BroadcastChannel('todo_channel');
+    channel.onmessage = (event) => {
+      if (event.data.type === 'UPDATE_TODOS') {
+        // Only update if data is different to avoid loops (though SetState usually handles this)
+        // For simplicity, we just sync the state from the message
+        // We use a functional update to check if it's actually different if needed, 
+        // but here we just trust the payload.
+        // Important: we need to distinguish "local update" vs "remote update" to avoid infinite loops if we were also broadcasting on every set.
+        // But here useEffect depends on [todos], so setting todos will trigger useEffect again and broadcast again.
+        // To prevent infinite loop: we should compare with local storage or use a ref to ignore next update.
+        // Actually, better approach: 
+        // Only broadcast when we perform an action (add/delete/etc), NOT in useEffect([todos]).
+        // BUT, since we want to keep it simple and react to state changes:
+        // Let's rely on JSON stringify comparison or just `storage` event?
+        // `storage` event is fired only in OTHER tabs, not current one. This is safer for loops.
+        // BroadcastChannel also receives in other tabs.
+        // The loop happens if Tab A sends -> Tab B receives & sets -> Tab B useEffect triggers -> Tab B sends -> Tab A receives...
+        
+        // Solution: When receiving remote update, set state but use a flag to skip broadcasting back? 
+        // Or simply: check if data is deeply equal.
+        setTodos(prev => {
+            if (JSON.stringify(prev) === JSON.stringify(event.data.payload)) {
+                return prev;
+            }
+            return event.data.payload;
+        });
+      }
+    };
+    return () => channel.close();
+  }, []);
 
   const addTodo = (text: string, priority: Priority = 'medium', category: string = '个人', dueDate?: string) => {
     const newTodo: Todo = {
@@ -92,7 +129,7 @@ export function TodoProvider({ children }: { children: React.ReactNode }) {
   };
 
   return (
-    <TodoContext.Provider value={{ todos, addTodo, toggleTodo, deleteTodo, updateTodo, clearCompleted }}>
+    <TodoContext.Provider value={{ todos, addTodo, toggleTodo, deleteTodo, updateTodo, clearCompleted, setTodos }}>
       {children}
     </TodoContext.Provider>
   );
