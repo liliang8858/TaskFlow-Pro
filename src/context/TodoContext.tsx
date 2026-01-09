@@ -3,15 +3,15 @@ import React, { createContext, useContext, useEffect, useState } from 'react';
 export type Priority = 'low' | 'medium' | 'high';
 
 export interface Todo {
-  id: string;
+  id: string;           // 唯一任务ID (UUID)，创建后永不改变
   text: string;
   completed: boolean;
   priority: Priority;
   category: string;
   dueDate?: string;
   createdAt: number;
-  sourceId?: string; // ID of the reporter who owns this task
-  sourceName?: string; // Name of the reporter
+  ownerId: string;      // 任务创建者的 peerId，永不改变
+  ownerName: string;    // 任务创建者的名称
 }
 
 interface TodoContextType {
@@ -19,50 +19,44 @@ interface TodoContextType {
   addTodo: (text: string, priority: Priority, category: string, dueDate?: string) => void;
   toggleTodo: (id: string) => void;
   deleteTodo: (id: string) => void;
-  updateTodo: (id: string, updates: Partial<Omit<Todo, 'id' | 'createdAt'>>) => void;
+  updateTodo: (id: string, updates: Partial<Omit<Todo, 'id' | 'createdAt' | 'ownerId' | 'ownerName'>>) => void;
   clearCompleted: () => void;
   setTodos: (todos: Todo[] | ((prev: Todo[]) => Todo[])) => void;
-  filterSource: string | null;
-  setFilterSource: (sourceId: string | null) => void;
+  filterOwner: string | null;
+  setFilterOwner: (ownerId: string | null) => void;
 }
 
 const TodoContext = createContext<TodoContextType | undefined>(undefined);
 
+// 获取当前用户信息
+const getCurrentUser = () => {
+  const peerId = localStorage.getItem('taskflow_peer_id') || '';
+  const userName = localStorage.getItem('taskflow_user_name') || '未命名';
+  return { peerId, userName };
+};
+
 export function TodoProvider({ children }: { children: React.ReactNode }) {
-  const [filterSource, setFilterSource] = useState<string | null>(null);
+  const [filterOwner, setFilterOwner] = useState<string | null>(null);
   const [todos, setTodos] = useState<Todo[]>(() => {
     const saved = localStorage.getItem('super-todos');
     if (saved) {
       try {
-        return JSON.parse(saved);
+        const parsed = JSON.parse(saved);
+        // 兼容旧数据：将 sourceId/sourceName 迁移到 ownerId/ownerName
+        return parsed.map((t: any) => ({
+          ...t,
+          ownerId: t.ownerId || t.sourceId || '',
+          ownerName: t.ownerName || t.sourceName || '未命名'
+        }));
       } catch (e) {
         console.error('Failed to parse todos', e);
       }
     }
-    // Default demo data
-    return [
-      {
-        id: '1',
-        text: '欢迎使用 Super Todo',
-        completed: false,
-        priority: 'high',
-        category: '个人',
-        createdAt: Date.now(),
-      },
-      {
-        id: '2',
-        text: '尝试添加一个新的任务',
-        completed: false,
-        priority: 'medium',
-        category: '工作',
-        createdAt: Date.now() - 1000,
-      }
-    ];
+    return [];
   });
 
   useEffect(() => {
     localStorage.setItem('super-todos', JSON.stringify(todos));
-    // Broadcast change to other tabs
     const channel = new BroadcastChannel('todo_channel');
     channel.postMessage({ type: 'UPDATE_TODOS', payload: todos });
     channel.close();
@@ -72,28 +66,11 @@ export function TodoProvider({ children }: { children: React.ReactNode }) {
     const channel = new BroadcastChannel('todo_channel');
     channel.onmessage = (event) => {
       if (event.data.type === 'UPDATE_TODOS') {
-        // Only update if data is different to avoid loops (though SetState usually handles this)
-        // For simplicity, we just sync the state from the message
-        // We use a functional update to check if it's actually different if needed, 
-        // but here we just trust the payload.
-        // Important: we need to distinguish "local update" vs "remote update" to avoid infinite loops if we were also broadcasting on every set.
-        // But here useEffect depends on [todos], so setting todos will trigger useEffect again and broadcast again.
-        // To prevent infinite loop: we should compare with local storage or use a ref to ignore next update.
-        // Actually, better approach: 
-        // Only broadcast when we perform an action (add/delete/etc), NOT in useEffect([todos]).
-        // BUT, since we want to keep it simple and react to state changes:
-        // Let's rely on JSON stringify comparison or just `storage` event?
-        // `storage` event is fired only in OTHER tabs, not current one. This is safer for loops.
-        // BroadcastChannel also receives in other tabs.
-        // The loop happens if Tab A sends -> Tab B receives & sets -> Tab B useEffect triggers -> Tab B sends -> Tab A receives...
-        
-        // Solution: When receiving remote update, set state but use a flag to skip broadcasting back? 
-        // Or simply: check if data is deeply equal.
         setTodos(prev => {
-            if (JSON.stringify(prev) === JSON.stringify(event.data.payload)) {
-                return prev;
-            }
-            return event.data.payload;
+          if (JSON.stringify(prev) === JSON.stringify(event.data.payload)) {
+            return prev;
+          }
+          return event.data.payload;
         });
       }
     };
@@ -101,14 +78,18 @@ export function TodoProvider({ children }: { children: React.ReactNode }) {
   }, []);
 
   const addTodo = (text: string, priority: Priority = 'medium', category: string = '个人', dueDate?: string) => {
+    const { peerId, userName } = getCurrentUser();
+    
     const newTodo: Todo = {
-      id: crypto.randomUUID(),
+      id: crypto.randomUUID(),  // 唯一ID
       text,
       completed: false,
       priority,
       category,
       dueDate,
       createdAt: Date.now(),
+      ownerId: peerId,          // 创建者ID，永不改变
+      ownerName: userName       // 创建者名称
     };
     setTodos(prev => [newTodo, ...prev]);
   };
@@ -123,7 +104,7 @@ export function TodoProvider({ children }: { children: React.ReactNode }) {
     setTodos(prev => prev.filter(todo => todo.id !== id));
   };
 
-  const updateTodo = (id: string, updates: Partial<Omit<Todo, 'id' | 'createdAt'>>) => {
+  const updateTodo = (id: string, updates: Partial<Omit<Todo, 'id' | 'createdAt' | 'ownerId' | 'ownerName'>>) => {
     setTodos(prev => prev.map(todo => 
       todo.id === id ? { ...todo, ...updates } : todo
     ));
@@ -141,8 +122,8 @@ export function TodoProvider({ children }: { children: React.ReactNode }) {
     updateTodo,
     clearCompleted,
     setTodos,
-    filterSource,
-    setFilterSource
+    filterOwner,
+    setFilterOwner
   };
 
   return (

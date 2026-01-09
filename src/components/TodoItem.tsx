@@ -26,8 +26,9 @@ export function TodoItem({ todo }: { todo: Todo }) {
     }
   };
 
-  const isMyTask = !todo.sourceId || todo.sourceId === peerId;
-  const sourceName = todo.sourceName || (isMyTask ? '我自己' : '未知来源');
+  // 判断是否是我的任务（通过 ownerId）
+  const isMyTask = todo.ownerId === peerId || !todo.ownerId;
+  const ownerName = todo.ownerName || (isMyTask ? '我自己' : '未知');
 
   return (
     <div className={cn(
@@ -82,7 +83,7 @@ export function TodoItem({ todo }: { todo: Todo }) {
             {!isMyTask && (
               <div className="flex items-center gap-1 px-2 py-0.5 bg-blue-50 text-blue-600 rounded-md text-xs font-medium">
                 <User className="w-3 h-3" />
-                <span>{sourceName}</span>
+                <span>{ownerName}</span>
               </div>
             )}
           </div>

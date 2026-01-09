@@ -13,18 +13,21 @@ export interface Reporter {
 
 /**
  * P2P 单向向上汇报
+ * 
+ * 核心原则：
+ * 1. 每个任务有唯一的 id (UUID) 和 ownerId (创建者)
+ * 2. 任务无论如何流转，ownerId 永不改变
+ * 3. 同步时按 ownerId 合并，相同 ownerId 的任务完全替换
  */
 export function usePeerSync() {
   const { todos, setTodos } = useTodos();
   const [peerId, setPeerId] = useState<string | null>(null);
   const [isConnected, setIsConnected] = useState(false);
-  const [reporters, setReporters] = useState<Reporter[]>([]); // 下级列表
-  const [hostInfo, setHostInfo] = useState<Reporter | null>(null); // 上级信息
+  const [reporters, setReporters] = useState<Reporter[]>([]);
+  const [hostInfo, setHostInfo] = useState<Reporter | null>(null);
   const peerRef = useRef<Peer | null>(null);
 
-  // 入站连接：下级连我
   const inboundConnections = useRef<Map<string, DataConnection>>(new Map());
-  // 出站连接：我连上级
   const outboundConnection = useRef<DataConnection | null>(null);
 
   const todosRef = useRef(todos);
@@ -33,89 +36,90 @@ export function usePeerSync() {
   useEffect(() => { todosRef.current = todos; }, [todos]);
   useEffect(() => { peerIdRef.current = peerId; }, [peerId]);
 
-  // 获取用户名
   const getUserName = useCallback((): string => {
     return localStorage.getItem('taskflow_user_name') || '未命名';
   }, []);
 
-  // 设置用户名
   const setUserName = useCallback((name: string) => {
     localStorage.setItem('taskflow_user_name', name);
   }, []);
 
   /**
-   * 向上级汇报所有任务（我的 + 下级的）
-   * 保持每个任务的原始 sourceId
+   * 向上级汇报所有任务
+   * 任务保持原始的 ownerId，不做任何修改
    */
   const reportToHost = useCallback(() => {
     const conn = outboundConnection.current;
     if (!conn || !conn.open) return;
 
-    const allTodos = todosRef.current;
     const myId = peerIdRef.current;
     const myName = getUserName();
 
-    // 确保我的任务有正确的 sourceId
-    const todosToSend = allTodos.map(t => ({
-      ...t,
-      sourceId: t.sourceId || myId,
-      sourceName: t.sourceName || ((!t.sourceId || t.sourceId === myId) ? myName : t.sourceName)
-    }));
-
-    console.log(`[Report] Sending ${todosToSend.length} todos to host`);
+    console.log(`[Report] Sending ${todosRef.current.length} todos to host`);
 
     conn.send({
       type: 'SYNC_TODOS',
-      sourceId: myId,
-      sourceName: myName,
-      payload: todosToSend
+      senderId: myId,
+      senderName: myName,
+      payload: todosRef.current
     });
   }, [getUserName]);
 
   /**
    * 处理下级发来的数据
+   * 按 ownerId 合并任务，保持任务归属不变
    */
   const handleInboundData = useCallback((conn: DataConnection, data: any) => {
     if (data?.type !== 'SYNC_TODOS' || !Array.isArray(data.payload)) {
       return;
     }
 
-    const sourceId = data.sourceId || conn.peer;
-    const sourceName = data.sourceName || '未命名';
+    const senderId = data.senderId || conn.peer;
+    const senderName = data.senderName || '未命名';
     const myId = peerIdRef.current;
 
-    if (sourceId === myId) return;
+    if (senderId === myId) return;
 
-    console.log(`[Receive] Got ${data.payload.length} todos from: ${sourceName} (${sourceId})`);
+    console.log(`[Receive] Got ${data.payload.length} todos from: ${senderName} (${senderId})`);
 
     // 更新汇报人名称
     setReporters(prev => {
-      const existing = prev.find(r => r.id === sourceId);
-      if (existing) {
-        if (existing.name !== sourceName) {
-          return prev.map(r => r.id === sourceId ? { ...r, name: sourceName } : r);
-        }
-        return prev;
+      const existing = prev.find(r => r.id === senderId);
+      if (existing && existing.name !== senderName) {
+        return prev.map(r => r.id === senderId ? { ...r, name: senderName } : r);
       }
       return prev;
     });
 
     setTodos(prev => {
+      // 收集所有收到的任务的 ownerId
+      const incomingOwnerIds = new Set(data.payload.map((t: Todo) => t.ownerId));
+      
+      // 保留：我的任务 + 不在本次同步范围内的其他任务
       const kept = prev.filter(t => {
-        if (!t.sourceId || t.sourceId === myId) return true;
-        return t.sourceId !== sourceId;
+        // 保留我的任务
+        if (t.ownerId === myId) return true;
+        // 保留不在本次同步范围内的任务
+        return !incomingOwnerIds.has(t.ownerId);
       });
 
+      // 添加收到的任务（保持原始 ownerId 和 ownerName）
       const incoming: Todo[] = data.payload.map((t: any) => ({
         ...t,
-        sourceId: sourceId,
-        sourceName: sourceName
+        // 确保字段完整
+        ownerId: t.ownerId || senderId,
+        ownerName: t.ownerName || senderName
       }));
 
-      return [...kept, ...incoming];
+      // 按 id 去重（以收到的为准）
+      const incomingIds = new Set(incoming.map(t => t.id));
+      const finalKept = kept.filter(t => !incomingIds.has(t.id));
+
+      console.log(`[Merge] Kept ${finalKept.length}, added ${incoming.length}`);
+      return [...finalKept, ...incoming];
     });
 
-    // 继续向上汇报（转发下级的任务给我的上级）
+    // 继续向上汇报
     setTimeout(() => {
       if (outboundConnection.current?.open) {
         reportToHost();
@@ -140,7 +144,6 @@ export function usePeerSync() {
 
     const initPeer = async () => {
       const PeerClass = (await import('peerjs')).default;
-      // 使用固定的 ID
       const savedId = localStorage.getItem('taskflow_peer_id');
 
       const iceServers = [
@@ -169,7 +172,6 @@ export function usePeerSync() {
           if (!mounted) return;
           console.log('[Peer] My ID:', id);
           setPeerId(id);
-          // 固定保存 ID
           localStorage.setItem('taskflow_peer_id', id);
 
           // 自动连接上级
@@ -180,7 +182,6 @@ export function usePeerSync() {
           }
         });
 
-        // 下级连我
         newPeer.on('connection', (conn) => {
           console.log('[Peer] Subordinate connected:', conn.peer);
 
@@ -215,8 +216,6 @@ export function usePeerSync() {
           console.error('[Peer] Error:', err);
 
           if (err.type === 'unavailable-id' && idToUse) {
-            // ID 被占用，生成新的
-            console.warn('[Peer] ID unavailable, generating new one');
             localStorage.removeItem('taskflow_peer_id');
             newPeer.destroy();
             setupPeer(undefined, 0);
@@ -243,107 +242,101 @@ export function usePeerSync() {
         peerRef.current = newPeer;
       };
 
-      setupPeer(savedId || undefined);
-    };
+      // 内部连接函数
+      const connectToHostInternal = (hostId: string) => {
+        const maxRetries = 5;
+        const retryDelay = 1500;
+        let retryCount = 0;
 
-    // 内部连接函数
-    const connectToHostInternal = (hostId: string) => {
-      const maxRetries = 5;
-      const retryDelay = 1500;
-      let retryCount = 0;
-
-      const attemptConnect = () => {
-        if (!peerRef.current?.id) {
-          if (retryCount < maxRetries) {
-            retryCount++;
-            setTimeout(attemptConnect, retryDelay);
-          }
-          return;
-        }
-
-        if (peerRef.current.disconnected || peerRef.current.destroyed) {
-          peerRef.current.reconnect();
-          if (retryCount < maxRetries) {
-            retryCount++;
-            setTimeout(attemptConnect, retryDelay);
-          }
-          return;
-        }
-
-        console.log(`[Connect] Attempt ${retryCount + 1} to host: ${hostId}`);
-
-        let conn: DataConnection;
-        try {
-          conn = peerRef.current.connect(hostId, {
-            reliable: true,
-            serialization: 'json'
-          });
-        } catch (err) {
-          if (retryCount < maxRetries) {
-            retryCount++;
-            setTimeout(attemptConnect, retryDelay);
-          }
-          return;
-        }
-
-        const timeout = setTimeout(() => {
-          if (!conn.open) {
-            conn.close();
+        const attemptConnect = () => {
+          if (!peerRef.current?.id) {
             if (retryCount < maxRetries) {
               retryCount++;
-              attemptConnect();
+              setTimeout(attemptConnect, retryDelay);
             }
+            return;
           }
-        }, 8000);
 
-        conn.on('open', () => {
-          clearTimeout(timeout);
-          console.log('[Connect] Connected to host!');
-          setIsConnected(true);
-          outboundConnection.current = conn;
-          localStorage.setItem('taskflow_target_id', hostId);
-          setHostInfo({ id: hostId, name: '上级', isOnline: true });
+          if (peerRef.current.disconnected || peerRef.current.destroyed) {
+            peerRef.current.reconnect();
+            if (retryCount < maxRetries) {
+              retryCount++;
+              setTimeout(attemptConnect, retryDelay);
+            }
+            return;
+          }
 
-          // 立即汇报所有任务，保持原始 sourceId
-          const myId = peerIdRef.current;
-          const myName = localStorage.getItem('taskflow_user_name') || '未命名';
-          const todosToSend = todosRef.current.map(t => ({
-            ...t,
-            sourceId: t.sourceId || myId,
-            sourceName: t.sourceName || ((!t.sourceId || t.sourceId === myId) ? myName : t.sourceName)
-          }));
-          conn.send({
-            type: 'SYNC_TODOS',
-            sourceId: myId,
-            sourceName: myName,
-            payload: todosToSend
+          console.log(`[Connect] Attempt ${retryCount + 1} to host: ${hostId}`);
+
+          let conn: DataConnection;
+          try {
+            conn = peerRef.current.connect(hostId, {
+              reliable: true,
+              serialization: 'json'
+            });
+          } catch (err) {
+            if (retryCount < maxRetries) {
+              retryCount++;
+              setTimeout(attemptConnect, retryDelay);
+            }
+            return;
+          }
+
+          const timeout = setTimeout(() => {
+            if (!conn.open) {
+              conn.close();
+              if (retryCount < maxRetries) {
+                retryCount++;
+                attemptConnect();
+              }
+            }
+          }, 8000);
+
+          conn.on('open', () => {
+            clearTimeout(timeout);
+            console.log('[Connect] Connected to host!');
+            setIsConnected(true);
+            outboundConnection.current = conn;
+            localStorage.setItem('taskflow_target_id', hostId);
+            setHostInfo({ id: hostId, name: '上级', isOnline: true });
+
+            // 立即汇报
+            const myId = peerIdRef.current;
+            const myName = localStorage.getItem('taskflow_user_name') || '未命名';
+            conn.send({
+              type: 'SYNC_TODOS',
+              senderId: myId,
+              senderName: myName,
+              payload: todosRef.current
+            });
           });
-        });
 
-        conn.on('data', () => {});
+          conn.on('data', () => {});
 
-        conn.on('close', () => {
-          clearTimeout(timeout);
-          setIsConnected(false);
-          outboundConnection.current = null;
-          setHostInfo(prev => prev ? { ...prev, isOnline: false } : null);
-          // 尝试重连
-          setTimeout(() => attemptConnect(), 3000);
-        });
-
-        conn.on('error', () => {
-          clearTimeout(timeout);
-          if (retryCount < maxRetries) {
-            retryCount++;
-            setTimeout(attemptConnect, retryDelay);
-          } else {
+          conn.on('close', () => {
+            clearTimeout(timeout);
             setIsConnected(false);
             outboundConnection.current = null;
-          }
-        });
+            setHostInfo(prev => prev ? { ...prev, isOnline: false } : null);
+            setTimeout(() => attemptConnect(), 3000);
+          });
+
+          conn.on('error', () => {
+            clearTimeout(timeout);
+            if (retryCount < maxRetries) {
+              retryCount++;
+              setTimeout(attemptConnect, retryDelay);
+            } else {
+              setIsConnected(false);
+              outboundConnection.current = null;
+            }
+          });
+        };
+
+        attemptConnect();
       };
 
-      attemptConnect();
+      setupPeer(savedId || undefined);
     };
 
     initPeer();
@@ -415,19 +408,14 @@ export function usePeerSync() {
         outboundConnection.current = conn;
         setHostInfo({ id: hostId, name: '上级', isOnline: true });
 
-        // 立即汇报所有任务，保持原始 sourceId
+        // 立即汇报
         const myId = peerIdRef.current;
         const myName = localStorage.getItem('taskflow_user_name') || '未命名';
-        const todosToSend = todosRef.current.map(t => ({
-          ...t,
-          sourceId: t.sourceId || myId,
-          sourceName: t.sourceName || ((!t.sourceId || t.sourceId === myId) ? myName : t.sourceName)
-        }));
         conn.send({
           type: 'SYNC_TODOS',
-          sourceId: myId,
-          sourceName: myName,
-          payload: todosToSend
+          senderId: myId,
+          senderName: myName,
+          payload: todosRef.current
         });
       });
 
@@ -438,7 +426,6 @@ export function usePeerSync() {
         setIsConnected(false);
         outboundConnection.current = null;
         setHostInfo(prev => prev ? { ...prev, isOnline: false } : null);
-        // 尝试重连
         setTimeout(() => attemptConnect(), 3000);
       });
 

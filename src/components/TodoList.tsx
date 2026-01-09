@@ -6,7 +6,7 @@ import { FilterBar } from './FilterBar';
 import { Inbox } from 'lucide-react';
 
 export function TodoList() {
-  const { todos, filterSource } = useTodos();
+  const { todos, filterOwner } = useTodos();
   const { peerId } = usePeer();
   const [filter, setFilter] = useState<'all' | 'active' | 'completed'>('all');
   const [categoryFilter, setCategoryFilter] = useState<string | null>(null);
@@ -24,15 +24,16 @@ export function TodoList() {
 
       const categoryMatch = categoryFilter ? todo.category === categoryFilter : true;
 
-      const sourceMatch = filterSource ? 
-        (filterSource === peerId ? (!todo.sourceId || todo.sourceId === peerId) : todo.sourceId === filterSource) : 
+      // 按 ownerId 筛选
+      const ownerMatch = filterOwner ? 
+        (filterOwner === peerId ? (todo.ownerId === peerId || !todo.ownerId) : todo.ownerId === filterOwner) : 
         true;
 
-      return statusMatch && categoryMatch && sourceMatch;
+      return statusMatch && categoryMatch && ownerMatch;
     }).sort((a, b) => {
       // 1. 自己的任务排在最前面
-      const aIsMine = !a.sourceId || a.sourceId === peerId;
-      const bIsMine = !b.sourceId || b.sourceId === peerId;
+      const aIsMine = a.ownerId === peerId || !a.ownerId;
+      const bIsMine = b.ownerId === peerId || !b.ownerId;
       
       if (aIsMine !== bIsMine) {
         return aIsMine ? -1 : 1;
@@ -52,7 +53,7 @@ export function TodoList() {
       // 4. 按创建时间排序（新的在前）
       return b.createdAt - a.createdAt;
     });
-  }, [todos, filter, categoryFilter, filterSource, peerId]);
+  }, [todos, filter, categoryFilter, filterOwner, peerId]);
 
   return (
     <div className="space-y-6">

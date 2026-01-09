@@ -4,19 +4,35 @@ import { Users, User, LayoutGrid, ArrowUp, Wifi, WifiOff } from 'lucide-react';
 import { cn } from '../lib/utils';
 
 export function Sidebar() {
-  const { peerId, reporters, hostInfo, isConnected, getUserName } = usePeer();
-  const { todos, filterSource, setFilterSource } = useTodos();
+  const { peerId, reporters, hostInfo, getUserName } = usePeer();
+  const { todos, filterOwner, setFilterOwner } = useTodos();
 
   const myName = getUserName();
   const allCount = todos.length;
-  const myTodos = todos.filter(t => !t.sourceId || t.sourceId === peerId);
+  const myTodos = todos.filter(t => t.ownerId === peerId || !t.ownerId);
   const myCount = myTodos.length;
 
-  // 按 sourceName 分组统计
-  const reporterStats = reporters.map(r => ({
-    ...r,
-    count: todos.filter(t => t.sourceId === r.id).length
-  }));
+  // 按 ownerName 分组统计
+  const ownerStats = new Map<string, { id: string; name: string; count: number; isOnline: boolean }>();
+  
+  todos.forEach(t => {
+    if (t.ownerId && t.ownerId !== peerId) {
+      const existing = ownerStats.get(t.ownerId);
+      if (existing) {
+        existing.count++;
+      } else {
+        const reporter = reporters.find(r => r.id === t.ownerId);
+        ownerStats.set(t.ownerId, {
+          id: t.ownerId,
+          name: t.ownerName || '未命名',
+          count: 1,
+          isOnline: reporter?.isOnline || false
+        });
+      }
+    }
+  });
+
+  const ownerList = Array.from(ownerStats.values());
 
   return (
     <div className="w-64 flex-shrink-0 space-y-6">
@@ -67,10 +83,10 @@ export function Sidebar() {
         <div className="space-y-2 max-h-[400px] overflow-y-auto">
           {/* 全部 */}
           <button
-            onClick={() => setFilterSource(null)}
+            onClick={() => setFilterOwner(null)}
             className={cn(
               "w-full flex items-center justify-between p-2.5 rounded-xl transition-all text-sm",
-              filterSource === null
+              filterOwner === null
                 ? "bg-primary-gradient text-white shadow-md"
                 : "bg-slate-50 hover:bg-slate-100 text-gray-600"
             )}
@@ -81,7 +97,7 @@ export function Sidebar() {
             </div>
             <span className={cn(
               "text-xs font-bold px-2 py-0.5 rounded-md",
-              filterSource === null ? "bg-white/20" : "bg-white"
+              filterOwner === null ? "bg-white/20" : "bg-white"
             )}>
               {allCount}
             </span>
@@ -89,10 +105,10 @@ export function Sidebar() {
 
           {/* 我自己 */}
           <button
-            onClick={() => setFilterSource(peerId)}
+            onClick={() => setFilterOwner(peerId)}
             className={cn(
               "w-full flex items-center justify-between p-2.5 rounded-xl transition-all text-sm",
-              filterSource === peerId
+              filterOwner === peerId
                 ? "bg-primary-gradient text-white shadow-md"
                 : "bg-slate-50 hover:bg-slate-100 text-gray-600"
             )}
@@ -103,20 +119,20 @@ export function Sidebar() {
             </div>
             <span className={cn(
               "text-xs font-bold px-2 py-0.5 rounded-md",
-              filterSource === peerId ? "bg-white/20" : "bg-white"
+              filterOwner === peerId ? "bg-white/20" : "bg-white"
             )}>
               {myCount}
             </span>
           </button>
 
-          {/* 汇报人 */}
-          {reporterStats.map(reporter => (
+          {/* 其他任务所有者 */}
+          {ownerList.map(owner => (
             <button
-              key={reporter.id}
-              onClick={() => setFilterSource(reporter.id)}
+              key={owner.id}
+              onClick={() => setFilterOwner(owner.id)}
               className={cn(
                 "w-full flex items-center justify-between p-2.5 rounded-xl transition-all text-sm",
-                filterSource === reporter.id
+                filterOwner === owner.id
                   ? "bg-primary-gradient text-white shadow-md"
                   : "bg-slate-50 hover:bg-slate-100 text-gray-600"
               )}
@@ -126,21 +142,21 @@ export function Sidebar() {
                   <User className="w-4 h-4" />
                   <div className={cn(
                     "absolute -bottom-0.5 -right-0.5 w-2 h-2 rounded-full border border-white",
-                    reporter.isOnline ? "bg-green-500" : "bg-gray-300"
+                    owner.isOnline ? "bg-green-500" : "bg-gray-300"
                   )} />
                 </div>
-                <span className="font-medium truncate">{reporter.name}</span>
+                <span className="font-medium truncate">{owner.name}</span>
               </div>
               <span className={cn(
                 "text-xs font-bold px-2 py-0.5 rounded-md flex-shrink-0",
-                filterSource === reporter.id ? "bg-white/20" : "bg-white"
+                filterOwner === owner.id ? "bg-white/20" : "bg-white"
               )}>
-                {reporter.count}
+                {owner.count}
               </span>
             </button>
           ))}
 
-          {reporterStats.length === 0 && (
+          {ownerList.length === 0 && (
             <div className="text-center py-4 text-gray-400 text-xs">
               暂无汇报人连接
             </div>
