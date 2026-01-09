@@ -74,7 +74,7 @@ function DisplayModeContent() {
             </div>
 
             {/* Stats */}
-            <Stats layout="vertical" />
+            <Stats layout="clover" />
           </div>
         </div>
       </div>
@@ -142,7 +142,7 @@ function NormalModeContent() {
             </div>
 
             {/* Stats */}
-            <Stats layout="vertical" />
+            <Stats layout="clover" />
           </div>
         </div>
 

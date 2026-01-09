@@ -1,11 +1,13 @@
-import { Trash2, Calendar, Flag, Check } from 'lucide-react';
+import { Trash2, Calendar, Flag, Check, User } from 'lucide-react';
 import { Todo, useTodos } from '../context/TodoContext';
+import { usePeer } from '../context/PeerContext';
 import { cn } from '../lib/utils';
 import { format, isToday, isTomorrow } from 'date-fns';
 import { zhCN } from 'date-fns/locale';
 
 export function TodoItem({ todo }: { todo: Todo }) {
   const { toggleTodo, deleteTodo } = useTodos();
+  const { peerId } = usePeer();
 
   const formatDate = (dateStr?: string) => {
     if (!dateStr) return '';
@@ -24,11 +26,15 @@ export function TodoItem({ todo }: { todo: Todo }) {
     }
   };
 
+  const isMyTask = !todo.sourceId || todo.sourceId === peerId;
+  const sourceName = todo.sourceName || (isMyTask ? '我自己' : '未知来源');
+
   return (
     <div className={cn(
       "group bg-white/90 rounded-2xl p-5 flex items-center justify-between shadow-card transition-all duration-300 relative overflow-hidden border border-white hover:-translate-y-1 hover:scale-[1.005] hover:shadow-card-hover hover:z-10",
       {
         'opacity-70 bg-white/60': todo.completed,
+        'ring-2 ring-primary/20': isMyTask, // 自己的任务加边框
       }
     )}>
       {/* Priority Indicator Line */}
@@ -43,28 +49,44 @@ export function TodoItem({ todo }: { todo: Todo }) {
       )} />
 
       <div className="flex items-center gap-5 flex-1 pl-2">
-        <label className="relative cursor-pointer flex items-center group/check">
+        <label className={cn(
+          "relative flex items-center group/check",
+          isMyTask ? "cursor-pointer" : "cursor-not-allowed opacity-60"
+        )}>
           <input 
             type="checkbox" 
             className="hidden" 
             checked={todo.completed}
-            onChange={() => toggleTodo(todo.id)}
+            onChange={() => isMyTask && toggleTodo(todo.id)}
+            disabled={!isMyTask}
           />
           <div className={cn(
-            "w-6 h-6 border-2 border-slate-300 rounded-md transition-all duration-300 flex items-center justify-center text-white group-hover/check:border-primary",
+            "w-6 h-6 border-2 border-slate-300 rounded-md transition-all duration-300 flex items-center justify-center text-white",
+            isMyTask && "group-hover/check:border-primary",
             todo.completed && "bg-success border-success"
           )}>
              {todo.completed && <Check className="w-4 h-4" strokeWidth={3} />}
           </div>
         </label>
 
-        <div className="flex flex-col gap-1.5">
-          <div className={cn(
-            "text-lg font-semibold text-text-main transition-all duration-300",
-            todo.completed && "line-through text-slate-400"
-          )}>
-            {todo.text}
+        <div className="flex flex-col gap-1.5 flex-1">
+          <div className="flex items-center gap-3">
+            <div className={cn(
+              "text-lg font-semibold text-text-main transition-all duration-300",
+              todo.completed && "line-through text-slate-400"
+            )}>
+              {todo.text}
+            </div>
+            
+            {/* 来源标记 */}
+            {!isMyTask && (
+              <div className="flex items-center gap-1 px-2 py-0.5 bg-blue-50 text-blue-600 rounded-md text-xs font-medium">
+                <User className="w-3 h-3" />
+                <span>{sourceName}</span>
+              </div>
+            )}
           </div>
+          
           <div className="flex items-center gap-4 text-[13px] text-text-sub">
             <span className={cn(
               "px-2.5 py-1 rounded-md text-xs font-semibold",
@@ -99,12 +121,15 @@ export function TodoItem({ todo }: { todo: Todo }) {
       </div>
 
       <div className="flex items-center gap-4">
-        <button
-          onClick={() => deleteTodo(todo.id)}
-          className="w-9 h-9 rounded-[10px] border-none bg-red-50 text-red-400 cursor-pointer flex items-center justify-center text-lg transition-all duration-300 opacity-0 group-hover:opacity-100 hover:bg-red-500 hover:text-white"
-        >
-          <Trash2 className="w-5 h-5" />
-        </button>
+        {/* 只有自己的任务才能删除 */}
+        {isMyTask && (
+          <button
+            onClick={() => deleteTodo(todo.id)}
+            className="w-9 h-9 rounded-[10px] border-none bg-red-50 text-red-400 cursor-pointer flex items-center justify-center text-lg transition-all duration-300 opacity-0 group-hover:opacity-100 hover:bg-red-500 hover:text-white"
+          >
+            <Trash2 className="w-5 h-5" />
+          </button>
+        )}
       </div>
     </div>
   );

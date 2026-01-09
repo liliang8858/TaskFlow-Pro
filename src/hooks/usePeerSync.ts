@@ -44,7 +44,8 @@ export function usePeerSync() {
   }, []);
 
   /**
-   * 向上级汇报所有任务
+   * 向上级汇报所有任务（我的 + 下级的）
+   * 保持每个任务的原始 sourceId
    */
   const reportToHost = useCallback(() => {
     const conn = outboundConnection.current;
@@ -54,13 +55,20 @@ export function usePeerSync() {
     const myId = peerIdRef.current;
     const myName = getUserName();
 
-    console.log(`[Report] Sending ${allTodos.length} todos to host`);
+    // 确保我的任务有正确的 sourceId
+    const todosToSend = allTodos.map(t => ({
+      ...t,
+      sourceId: t.sourceId || myId,
+      sourceName: t.sourceName || ((!t.sourceId || t.sourceId === myId) ? myName : t.sourceName)
+    }));
+
+    console.log(`[Report] Sending ${todosToSend.length} todos to host`);
 
     conn.send({
       type: 'SYNC_TODOS',
       sourceId: myId,
       sourceName: myName,
-      payload: allTodos
+      payload: todosToSend
     });
   }, [getUserName]);
 
@@ -107,7 +115,7 @@ export function usePeerSync() {
       return [...kept, ...incoming];
     });
 
-    // 继续向上汇报
+    // 继续向上汇报（转发下级的任务给我的上级）
     setTimeout(() => {
       if (outboundConnection.current?.open) {
         reportToHost();
@@ -296,14 +304,19 @@ export function usePeerSync() {
           localStorage.setItem('taskflow_target_id', hostId);
           setHostInfo({ id: hostId, name: '上级', isOnline: true });
 
-          // 立即汇报
-          const allTodos = todosRef.current;
+          // 立即汇报所有任务，保持原始 sourceId
+          const myId = peerIdRef.current;
           const myName = localStorage.getItem('taskflow_user_name') || '未命名';
+          const todosToSend = todosRef.current.map(t => ({
+            ...t,
+            sourceId: t.sourceId || myId,
+            sourceName: t.sourceName || ((!t.sourceId || t.sourceId === myId) ? myName : t.sourceName)
+          }));
           conn.send({
             type: 'SYNC_TODOS',
-            sourceId: peerIdRef.current,
+            sourceId: myId,
             sourceName: myName,
-            payload: allTodos
+            payload: todosToSend
           });
         });
 
@@ -402,14 +415,19 @@ export function usePeerSync() {
         outboundConnection.current = conn;
         setHostInfo({ id: hostId, name: '上级', isOnline: true });
 
-        // 立即汇报
-        const allTodos = todosRef.current;
+        // 立即汇报所有任务，保持原始 sourceId
+        const myId = peerIdRef.current;
         const myName = localStorage.getItem('taskflow_user_name') || '未命名';
+        const todosToSend = todosRef.current.map(t => ({
+          ...t,
+          sourceId: t.sourceId || myId,
+          sourceName: t.sourceName || ((!t.sourceId || t.sourceId === myId) ? myName : t.sourceName)
+        }));
         conn.send({
           type: 'SYNC_TODOS',
-          sourceId: peerIdRef.current,
+          sourceId: myId,
           sourceName: myName,
-          payload: allTodos
+          payload: todosToSend
         });
       });
 

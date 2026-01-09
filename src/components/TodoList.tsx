@@ -1,11 +1,13 @@
 import { useState, useMemo } from 'react';
 import { useTodos } from '../context/TodoContext';
+import { usePeer } from '../context/PeerContext';
 import { TodoItem } from './TodoItem';
 import { FilterBar } from './FilterBar';
 import { Inbox } from 'lucide-react';
 
 export function TodoList() {
   const { todos, filterSource } = useTodos();
+  const { peerId } = usePeer();
   const [filter, setFilter] = useState<'all' | 'active' | 'completed'>('all');
   const [categoryFilter, setCategoryFilter] = useState<string | null>(null);
 
@@ -22,19 +24,35 @@ export function TodoList() {
 
       const categoryMatch = categoryFilter ? todo.category === categoryFilter : true;
 
-      const sourceMatch = filterSource ? todo.sourceId === filterSource : true;
+      const sourceMatch = filterSource ? 
+        (filterSource === peerId ? (!todo.sourceId || todo.sourceId === peerId) : todo.sourceId === filterSource) : 
+        true;
 
       return statusMatch && categoryMatch && sourceMatch;
     }).sort((a, b) => {
-      // Sort by completed (active first), then priority (high first), then date
-      if (a.completed !== b.completed) return a.completed ? 1 : -1;
+      // 1. 自己的任务排在最前面
+      const aIsMine = !a.sourceId || a.sourceId === peerId;
+      const bIsMine = !b.sourceId || b.sourceId === peerId;
+      
+      if (aIsMine !== bIsMine) {
+        return aIsMine ? -1 : 1;
+      }
+
+      // 2. 按完成状态排序（未完成的在前）
+      if (a.completed !== b.completed) {
+        return a.completed ? 1 : -1;
+      }
+
+      // 3. 按优先级排序（高优先级在前）
       const priorityWeight = { high: 3, medium: 2, low: 1 };
       if (priorityWeight[a.priority] !== priorityWeight[b.priority]) {
         return priorityWeight[b.priority] - priorityWeight[a.priority];
       }
+
+      // 4. 按创建时间排序（新的在前）
       return b.createdAt - a.createdAt;
     });
-  }, [todos, filter, categoryFilter]);
+  }, [todos, filter, categoryFilter, filterSource, peerId]);
 
   return (
     <div className="space-y-6">
