@@ -2,7 +2,6 @@ import { useState, useMemo } from 'react';
 import { useTodos } from '../context/TodoContext';
 import { X, Copy, Check, FileText } from 'lucide-react';
 import { format, startOfWeek, endOfWeek, isWithinInterval, addWeeks, isAfter } from 'date-fns';
-import { zhCN } from 'date-fns/locale';
 import { cn } from '../lib/utils';
 
 interface WeeklyReportModalProps {
@@ -29,10 +28,10 @@ export function WeeklyReportModal({ isOpen, onClose }: WeeklyReportModalProps) {
       if (!t.completed) return false;
       const createdDate = new Date(t.createdAt);
       const dueDate = t.dueDate ? new Date(t.dueDate) : null;
-      
+
       const isCreatedThisWeek = isWithinInterval(createdDate, { start: weekStart, end: weekEnd });
       const isDueThisWeek = dueDate && isWithinInterval(dueDate, { start: weekStart, end: weekEnd });
-      
+
       // 如果没有截止日期，且已完成，且是本周创建的 -> 算本周
       // 如果有截止日期，且截止日期在本周 -> 算本周
       return isCreatedThisWeek || isDueThisWeek;
@@ -43,11 +42,11 @@ export function WeeklyReportModal({ isOpen, onClose }: WeeklyReportModalProps) {
       if (t.completed) return false;
       const createdDate = new Date(t.createdAt);
       const dueDate = t.dueDate ? new Date(t.dueDate) : null;
-      
+
       // 本周创建的，或者截止日期在本周的，或者截止日期已过但未完成的
       const isCreatedThisWeek = isWithinInterval(createdDate, { start: weekStart, end: weekEnd });
       const isDueThisWeekOrBefore = dueDate && (isWithinInterval(dueDate, { start: weekStart, end: weekEnd }) || dueDate < weekStart);
-      
+
       return isCreatedThisWeek || isDueThisWeekOrBefore;
     });
 
@@ -61,9 +60,9 @@ export function WeeklyReportModal({ isOpen, onClose }: WeeklyReportModalProps) {
 
     // 4. 生成文本
     const dateRangeStr = `${format(weekStart, 'MM.dd')} - ${format(weekEnd, 'MM.dd')}`;
-    
+
     let content = `# 📝 周报 (${dateRangeStr})\n\n`;
-    
+
     content += `## ✅ 本周完成\n`;
     if (completedTasks.length > 0) {
       completedTasks.forEach(t => content += `- ${t.text} \n`);
@@ -89,9 +88,9 @@ export function WeeklyReportModal({ isOpen, onClose }: WeeklyReportModalProps) {
     } else {
       content += `- (暂无具体计划)\n`;
     }
-    
+
     content += `\n`;
-    const completionRate = (completedTasks.length + inProgressTasks.length) > 0 
+    const completionRate = (completedTasks.length + inProgressTasks.length) > 0
       ? Math.round((completedTasks.length / (completedTasks.length + inProgressTasks.length)) * 100)
       : 0;
     content += `**📊 本周完成率**: ${completionRate}%`;
@@ -110,11 +109,11 @@ export function WeeklyReportModal({ isOpen, onClose }: WeeklyReportModalProps) {
   return (
     <div className="fixed inset-0 z-[100] flex items-center justify-center p-4">
       {/* Backdrop */}
-      <div 
+      <div
         className="absolute inset-0 bg-black/20 backdrop-blur-sm transition-opacity"
         onClick={onClose}
       />
-      
+
       {/* Modal Content */}
       <div className="relative w-full max-w-2xl bg-white/90 backdrop-blur-xl rounded-[24px] shadow-2xl flex flex-col max-h-[85vh] animate-in fade-in zoom-in-95 duration-200 border border-white/50">
         <div className="flex items-center justify-between p-6 border-b border-gray-100">
@@ -123,11 +122,11 @@ export function WeeklyReportModal({ isOpen, onClose }: WeeklyReportModalProps) {
               <FileText className="w-5 h-5" />
             </div>
             <div>
-                <h2 className="text-xl font-bold text-gray-800">生成周报</h2>
-                <p className="text-sm text-gray-500">自动汇总本周工作进展</p>
+              <h2 className="text-xl font-bold text-gray-800">生成周报</h2>
+              <p className="text-sm text-gray-500">自动汇总本周工作进展</p>
             </div>
           </div>
-          <button 
+          <button
             onClick={onClose}
             className="p-2 hover:bg-gray-100 rounded-full transition-colors text-gray-500"
           >
@@ -152,8 +151,8 @@ export function WeeklyReportModal({ isOpen, onClose }: WeeklyReportModalProps) {
             onClick={handleCopy}
             className={cn(
               "px-6 py-2.5 rounded-xl text-sm font-bold text-white shadow-lg transition-all duration-200 flex items-center gap-2",
-              copied 
-                ? "bg-green-500 shadow-green-500/30" 
+              copied
+                ? "bg-green-500 shadow-green-500/30"
                 : "bg-gray-900 hover:bg-gray-800 shadow-gray-900/30 hover:-translate-y-0.5"
             )}
           >

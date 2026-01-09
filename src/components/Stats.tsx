@@ -37,15 +37,13 @@ function StatCard({ type, icon, title, value, children }: StatCardProps) {
 
 export function Stats({ layout = 'horizontal' }: { layout?: 'horizontal' | 'vertical' }) {
   const { todos } = useTodos();
-  
+
   const total = todos.length;
   const completed = todos.filter(t => t.completed).length;
   const active = total - completed;
   const completionRate = total === 0 ? 0 : Math.round((completed / total) * 100);
 
   // SVG parameters for circle progress
-  const radius = 15.9155;
-  const circumference = 2 * Math.PI * radius;
   const strokeDasharray = `${completionRate}, 100`;
 
   return (
@@ -53,40 +51,40 @@ export function Stats({ layout = 'horizontal' }: { layout?: 'horizontal' | 'vert
       "grid gap-4 mb-10 transition-all",
       layout === 'horizontal' ? "grid-cols-1 sm:grid-cols-2 lg:grid-cols-4" : "grid-cols-1"
     )}>
-      <StatCard 
-        type="total" 
-        icon={<Layers className="w-6 h-6" />} 
-        title="总任务数" 
-        value={total} 
+      <StatCard
+        type="total"
+        icon={<Layers className="w-6 h-6" />}
+        title="总任务数"
+        value={total}
       />
-      <StatCard 
-        type="pending" 
-        icon={<Clock className="w-6 h-6" />} 
-        title="待处理" 
-        value={active} 
+      <StatCard
+        type="pending"
+        icon={<Clock className="w-6 h-6" />}
+        title="待处理"
+        value={active}
       />
-      <StatCard 
-        type="done" 
-        icon={<CheckCircle2 className="w-6 h-6" />} 
-        title="已完成" 
-        value={completed} 
+      <StatCard
+        type="done"
+        icon={<CheckCircle2 className="w-6 h-6" />}
+        title="已完成"
+        value={completed}
       />
-      <StatCard 
-        type="rate" 
-        icon={<PieChart className="w-6 h-6" />} 
-        title="完成率" 
+      <StatCard
+        type="rate"
+        icon={<PieChart className="w-6 h-6" />}
+        title="完成率"
         value={`${completionRate}%`}
       >
         <div className="absolute right-5 bottom-5 w-20 h-20">
           <svg viewBox="0 0 36 36" className="block mx-auto max-w-full max-h-full">
-            <path 
-              className="fill-none stroke-white/30 stroke-[3.8]" 
-              d="M18 2.0845 a 15.9155 15.9155 0 0 1 0 31.831 a 15.9155 15.9155 0 0 1 0 -31.831" 
+            <path
+              className="fill-none stroke-white/30 stroke-[3.8]"
+              d="M18 2.0845 a 15.9155 15.9155 0 0 1 0 31.831 a 15.9155 15.9155 0 0 1 0 -31.831"
             />
-            <path 
-              className="fill-none stroke-[3.8] stroke-linecap-round stroke-white animate-[progress_1s_ease-out_forwards]" 
-              strokeDasharray={strokeDasharray} 
-              d="M18 2.0845 a 15.9155 15.9155 0 0 1 0 31.831 a 15.9155 15.9155 0 0 1 0 -31.831" 
+            <path
+              className="fill-none stroke-[3.8] stroke-linecap-round stroke-white animate-[progress_1s_ease-out_forwards]"
+              strokeDasharray={strokeDasharray}
+              d="M18 2.0845 a 15.9155 15.9155 0 0 1 0 31.831 a 15.9155 15.9155 0 0 1 0 -31.831"
             />
             <text x="18" y="20.35" className="fill-white font-bold text-[0.5em] text-center anchor-middle" textAnchor="middle">
               {completionRate}%

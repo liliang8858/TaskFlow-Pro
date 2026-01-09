@@ -1,5 +1,5 @@
-import { useState } from 'react';
-import { X, Smartphone, ArrowRight, Loader2, CheckCircle2 } from 'lucide-react';
+import { useState, useEffect } from 'react';
+import { X, Smartphone, ArrowRight, Loader2, CheckCircle2, RefreshCw } from 'lucide-react';
 import { usePeer } from '../context/PeerContext';
 import { cn } from '../lib/utils';
 
@@ -12,27 +12,48 @@ export function ConnectModal({ isOpen, onClose }: ConnectModalProps) {
   const [hostId, setHostId] = useState('');
   const { connectToHost, isConnected, isReady } = usePeer();
   const [isConnecting, setIsConnecting] = useState(false);
+  const [connectAttempt, setConnectAttempt] = useState(0);
 
   const handleConnect = () => {
     const cleanId = hostId.trim().replace(/\s/g, '');
     if (!cleanId) return;
     setIsConnecting(true);
+    setConnectAttempt(prev => prev + 1);
     connectToHost(cleanId);
-    setTimeout(() => {
-      if (!isConnected) {
-        setIsConnecting(false);
-      }
-    }, 5000); // Increased timeout for better UX
   };
+
+  // Monitor connection status
+  useEffect(() => {
+    if (isConnecting && isConnected) {
+      // Connection successful
+      setIsConnecting(false);
+    }
+  }, [isConnected, isConnecting]);
+
+  // Auto-retry indicator (the hook handles actual retries)
+  useEffect(() => {
+    if (isConnecting && !isConnected) {
+      const timer = setTimeout(() => {
+        // After 15 seconds, stop showing connecting state if still not connected
+        if (!isConnected) {
+          setIsConnecting(false);
+        }
+      }, 15000);
+      return () => clearTimeout(timer);
+    }
+  }, [isConnecting, isConnected, connectAttempt]);
   
   // Close automatically after success
-  if (isConnected && isOpen) {
-      setTimeout(() => {
-          onClose();
-          setIsConnecting(false);
-          setHostId('');
+  useEffect(() => {
+    if (isConnected && isOpen) {
+      const timer = setTimeout(() => {
+        onClose();
+        setIsConnecting(false);
+        setHostId('');
       }, 1500);
-  }
+      return () => clearTimeout(timer);
+    }
+  }, [isConnected, isOpen, onClose]);
 
   if (!isOpen) return null;
 
@@ -111,12 +132,21 @@ export function ConnectModal({ isOpen, onClose }: ConnectModalProps) {
                 {isConnecting ? (
                   <>
                     <Loader2 className="w-4 h-4 animate-spin" />
-                    正在连接...
+                    正在连接中，自动重试...
                   </>
                 ) : (
                   <>
-                    连接并同步
-                    <ArrowRight className="w-4 h-4" />
+                    {connectAttempt > 0 && !isConnected ? (
+                      <>
+                        <RefreshCw className="w-4 h-4" />
+                        重新连接
+                      </>
+                    ) : (
+                      <>
+                        连接并同步
+                        <ArrowRight className="w-4 h-4" />
+                      </>
+                    )}
                   </>
                 )}
             </button>

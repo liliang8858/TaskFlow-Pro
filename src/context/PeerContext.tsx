@@ -1,4 +1,4 @@
-import React, { createContext, useContext, ReactNode } from 'react';
+import { createContext, useContext, ReactNode } from 'react';
 import { usePeerSync } from '../hooks/usePeerSync';
 
 interface PeerContextType {
@@ -13,7 +13,7 @@ const PeerContext = createContext<PeerContextType | undefined>(undefined);
 
 export function PeerProvider({ children }: { children: ReactNode }) {
   // We ignore the isHost parameter as we modified usePeerSync to allow connections by default
-  const peerState = usePeerSync(); 
+  const peerState = usePeerSync();
 
   return (
     <PeerContext.Provider value={peerState}>

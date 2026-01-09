@@ -2,7 +2,6 @@ import { useState, useMemo } from 'react';
 import { useTodos } from '../context/TodoContext';
 import { TodoItem } from './TodoItem';
 import { FilterBar } from './FilterBar';
-import { cn } from '../lib/utils';
 import { Inbox } from 'lucide-react';
 
 export function TodoList() {
@@ -16,35 +15,35 @@ export function TodoList() {
 
   const filteredTodos = useMemo(() => {
     return todos.filter(todo => {
-      const statusMatch = 
+      const statusMatch =
         filter === 'all' ? true :
-        filter === 'active' ? !todo.completed :
-        todo.completed;
-      
+          filter === 'active' ? !todo.completed :
+            todo.completed;
+
       const categoryMatch = categoryFilter ? todo.category === categoryFilter : true;
-      
+
       const sourceMatch = filterSource ? todo.sourceId === filterSource : true;
-      
+
       return statusMatch && categoryMatch && sourceMatch;
     }).sort((a, b) => {
-        // Sort by completed (active first), then priority (high first), then date
-        if (a.completed !== b.completed) return a.completed ? 1 : -1;
-        const priorityWeight = { high: 3, medium: 2, low: 1 };
-        if (priorityWeight[a.priority] !== priorityWeight[b.priority]) {
-            return priorityWeight[b.priority] - priorityWeight[a.priority];
-        }
-        return b.createdAt - a.createdAt;
+      // Sort by completed (active first), then priority (high first), then date
+      if (a.completed !== b.completed) return a.completed ? 1 : -1;
+      const priorityWeight = { high: 3, medium: 2, low: 1 };
+      if (priorityWeight[a.priority] !== priorityWeight[b.priority]) {
+        return priorityWeight[b.priority] - priorityWeight[a.priority];
+      }
+      return b.createdAt - a.createdAt;
     });
   }, [todos, filter, categoryFilter]);
 
   return (
     <div className="space-y-6">
-      <FilterBar 
-        filter={filter} 
-        setFilter={setFilter} 
-        categoryFilter={categoryFilter} 
-        setCategoryFilter={setCategoryFilter} 
-        categories={categories} 
+      <FilterBar
+        filter={filter}
+        setFilter={setFilter}
+        categoryFilter={categoryFilter}
+        setCategoryFilter={setCategoryFilter}
+        categories={categories}
       />
 
       {filteredTodos.length === 0 ? (
