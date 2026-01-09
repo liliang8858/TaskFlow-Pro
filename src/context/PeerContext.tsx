@@ -1,5 +1,5 @@
 import { createContext, useContext, ReactNode } from 'react';
-import { usePeerSync } from '../hooks/usePeerSync';
+import { usePeerSync, Reporter } from '../hooks/usePeerSync';
 
 interface PeerContextType {
   peerId: string | null;
@@ -7,12 +7,15 @@ interface PeerContextType {
   connectToHost: (hostId: string) => void;
   isConnected: boolean;
   isReady: boolean;
+  reporters: Reporter[];
+  hostInfo: Reporter | null;
+  getUserName: () => string;
+  setUserName: (name: string) => void;
 }
 
 const PeerContext = createContext<PeerContextType | undefined>(undefined);
 
 export function PeerProvider({ children }: { children: ReactNode }) {
-  // We ignore the isHost parameter as we modified usePeerSync to allow connections by default
   const peerState = usePeerSync();
 
   return (

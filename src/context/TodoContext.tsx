@@ -11,6 +11,7 @@ export interface Todo {
   dueDate?: string;
   createdAt: number;
   sourceId?: string; // ID of the reporter who owns this task
+  sourceName?: string; // Name of the reporter
 }
 
 interface TodoContextType {
