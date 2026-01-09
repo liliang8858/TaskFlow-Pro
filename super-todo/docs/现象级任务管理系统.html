@@ -1,0 +1,834 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=1200, initial-scale=1.0">
+    <title>Phenomenal Task Management System</title>
+    <link href="https://cdnjs.cloudflare.com/ajax/libs/remixicon/4.6.0/remixicon.min.css" rel="stylesheet">
+    <style>
+        /* Font Imports */
+        @font-face {
+            font-family: 'MiSans';
+            src: url('https://assets-persist.lovart.ai/agent-static-assets/MiSans-Regular.ttf') format('truetype');
+            font-weight: 400;
+        }
+        @font-face {
+            font-family: 'MiSans';
+            src: url('https://assets-persist.lovart.ai/agent-static-assets/MiSans-Medium.ttf') format('truetype');
+            font-weight: 500;
+        }
+        @font-face {
+            font-family: 'MiSans';
+            src: url('https://assets-persist.lovart.ai/agent-static-assets/MiSans-Bold.ttf') format('truetype');
+            font-weight: 700;
+        }
+
+        /* Global Reset */
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+            font-family: 'MiSans', sans-serif;
+        }
+
+        body {
+            width: 1920px;
+            min-height: 100vh;
+            background: linear-gradient(135deg, #f5f7fa 0%, #c3cfe2 100%);
+            color: #2d3436;
+            overflow-x: hidden;
+            display: flex;
+            justify-content: center;
+            align-items: flex-start;
+        }
+
+        /* Variables */
+        :root {
+            --primary-grad: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            --glass-bg: rgba(255, 255, 255, 0.75);
+            --glass-border: 1px solid rgba(255, 255, 255, 0.8);
+            --shadow-soft: 0 10px 40px rgba(0, 0, 0, 0.08);
+            --shadow-hover: 0 20px 50px rgba(102, 126, 234, 0.2);
+            --high-prio: #ff6b6b;
+            --med-prio: #ffa500;
+            --low-prio: #51cf66;
+            --success: #20c997;
+            --text-main: #2d3748;
+            --text-sub: #718096;
+        }
+
+        /* Main Container */
+        .app-container {
+            width: 1200px;
+            margin: 60px 0;
+            padding: 0 20px;
+            position: relative;
+        }
+
+        /* Header */
+        header {
+            margin-bottom: 40px;
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+        }
+
+        .logo-area {
+            display: flex;
+            align-items: center;
+            gap: 15px;
+        }
+
+        .logo-icon {
+            width: 48px;
+            height: 48px;
+            background: var(--primary-grad);
+            border-radius: 14px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            color: white;
+            font-size: 24px;
+            box-shadow: 0 10px 20px rgba(118, 75, 162, 0.3);
+        }
+
+        .app-title {
+            font-size: 28px;
+            font-weight: 700;
+            background: var(--primary-grad);
+            -webkit-background-clip: text;
+            -webkit-text-fill-color: transparent;
+            letter-spacing: -0.5px;
+        }
+
+        .user-profile {
+            display: flex;
+            align-items: center;
+            gap: 12px;
+            background: white;
+            padding: 8px 16px;
+            border-radius: 50px;
+            box-shadow: 0 4px 15px rgba(0,0,0,0.05);
+        }
+
+        .avatar {
+            width: 36px;
+            height: 36px;
+            border-radius: 50%;
+            background: #e2e8f0;
+            background-image: url('https://images.unsplash.com/photo-1535713875002-d1d0cf377fde?auto=format&fit=crop&w=100&h=100');
+            background-size: cover;
+        }
+
+        .username {
+            font-weight: 600;
+            color: var(--text-main);
+            font-size: 14px;
+        }
+
+        /* Stats Grid */
+        .stats-grid {
+            display: grid;
+            grid-template-columns: repeat(4, 1fr);
+            gap: 24px;
+            margin-bottom: 40px;
+        }
+
+        .stat-card {
+            border-radius: 20px;
+            padding: 24px;
+            color: white;
+            position: relative;
+            overflow: hidden;
+            box-shadow: 0 15px 30px rgba(0,0,0,0.1);
+            transition: transform 0.3s ease;
+            display: flex;
+            flex-direction: column;
+            justify-content: space-between;
+            height: 160px;
+        }
+
+        .stat-card:hover {
+            transform: translateY(-5px);
+        }
+
+        .stat-card.total { background: linear-gradient(135deg, #667eea 0%, #764ba2 100%); }
+        .stat-card.pending { background: linear-gradient(135deg, #f6d365 0%, #fda085 100%); }
+        .stat-card.done { background: linear-gradient(135deg, #84fab0 0%, #8fd3f4 100%); color: #1a5c48; }
+        .stat-card.rate { background: linear-gradient(135deg, #a18cd1 0%, #fbc2eb 100%); }
+
+        .stat-header {
+            display: flex;
+            justify-content: space-between;
+            align-items: flex-start;
+            z-index: 2;
+        }
+
+        .stat-icon {
+            font-size: 24px;
+            background: rgba(255,255,255,0.2);
+            width: 44px;
+            height: 44px;
+            border-radius: 12px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            backdrop-filter: blur(5px);
+        }
+
+        .stat-info h3 {
+            font-size: 16px;
+            opacity: 0.9;
+            font-weight: 500;
+            margin-bottom: 8px;
+        }
+
+        .stat-info .number {
+            font-size: 36px;
+            font-weight: 700;
+            line-height: 1;
+        }
+
+        /* Circular Progress in Card 4 */
+        .progress-circle-container {
+            position: absolute;
+            right: 20px;
+            bottom: 20px;
+            width: 80px;
+            height: 80px;
+        }
+
+        .circular-chart {
+            display: block;
+            margin: 0 auto;
+            max-width: 100%;
+            max-height: 100%;
+        }
+
+        .circle-bg {
+            fill: none;
+            stroke: rgba(255,255,255,0.3);
+            stroke-width: 3.8;
+        }
+
+        .circle {
+            fill: none;
+            stroke-width: 3.8;
+            stroke-linecap: round;
+            stroke: #fff;
+            animation: progress 1s ease-out forwards;
+        }
+
+        @keyframes progress {
+            0% { stroke-dasharray: 0 100; }
+        }
+
+        .percentage {
+            fill: #fff;
+            font-family: 'MiSans', sans-serif;
+            font-weight: bold;
+            font-size: 0.5em;
+            text-anchor: middle;
+        }
+
+        /* Smart Input Area */
+        .input-section {
+            background: var(--glass-bg);
+            backdrop-filter: blur(20px);
+            border-radius: 20px;
+            padding: 24px;
+            box-shadow: var(--shadow-soft);
+            margin-bottom: 30px;
+            border: var(--glass-border);
+            transition: all 0.3s;
+        }
+
+        .input-collapsed {
+            display: flex;
+            align-items: center;
+            gap: 15px;
+            cursor: pointer;
+        }
+
+        .plus-btn {
+            width: 40px;
+            height: 40px;
+            border-radius: 12px;
+            background: var(--primary-grad);
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            color: white;
+            font-size: 24px;
+        }
+
+        .fake-input {
+            color: var(--text-sub);
+            font-size: 16px;
+            flex-grow: 1;
+        }
+
+        /* For the sake of the design, we show the EXPANDED state styling as if user clicked it, or a very rich "quick add" bar */
+        .input-expanded {
+            display: flex;
+            gap: 20px;
+            flex-wrap: wrap;
+        }
+
+        .task-input-group {
+            flex-grow: 1;
+            display: flex;
+            flex-direction: column;
+            gap: 8px;
+            min-width: 300px;
+        }
+
+        .task-input-group label {
+            font-size: 12px;
+            color: var(--text-sub);
+            font-weight: 600;
+            text-transform: uppercase;
+            letter-spacing: 0.5px;
+        }
+
+        .main-input {
+            width: 100%;
+            border: none;
+            background: rgba(255,255,255,0.5);
+            padding: 16px;
+            border-radius: 12px;
+            font-size: 18px;
+            color: var(--text-main);
+            outline: none;
+            transition: background 0.3s;
+        }
+
+        .main-input:focus {
+            background: white;
+            box-shadow: 0 0 0 2px #667eea;
+        }
+
+        .controls-row {
+            display: flex;
+            gap: 15px;
+            align-items: flex-end;
+            width: 100%;
+        }
+
+        .control-item {
+            display: flex;
+            flex-direction: column;
+            gap: 8px;
+            flex: 1;
+        }
+
+        .custom-select {
+            appearance: none;
+            background: white;
+            border: 1px solid #e2e8f0;
+            padding: 12px 16px;
+            border-radius: 10px;
+            font-size: 14px;
+            color: var(--text-main);
+            cursor: pointer;
+            background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='24' height='24' viewBox='0 0 24 24' fill='none' stroke='%23718096' stroke-width='2' stroke-linecap='round' stroke-linejoin='round'%3E%3Cpolyline points='6 9 12 15 18 9'%3E%3C/polyline%3E%3C/svg%3E");
+            background-repeat: no-repeat;
+            background-position: right 12px center;
+            background-size: 16px;
+        }
+
+        .add-btn {
+            background: var(--primary-grad);
+            color: white;
+            border: none;
+            padding: 12px 30px;
+            border-radius: 10px;
+            font-size: 16px;
+            font-weight: 600;
+            cursor: pointer;
+            box-shadow: 0 4px 15px rgba(102, 126, 234, 0.4);
+            transition: all 0.3s;
+            height: 45px;
+            margin-bottom: 1px;
+            display: flex;
+            align-items: center;
+            gap: 8px;
+        }
+
+        .add-btn:hover {
+            transform: translateY(-2px);
+            box-shadow: 0 8px 25px rgba(102, 126, 234, 0.6);
+        }
+
+        /* Filter Bar */
+        .filter-bar {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            margin-bottom: 24px;
+        }
+
+        .tabs {
+            background: rgba(255,255,255,0.6);
+            padding: 6px;
+            border-radius: 12px;
+            display: flex;
+            gap: 4px;
+        }
+
+        .tab-btn {
+            padding: 10px 24px;
+            border-radius: 8px;
+            border: none;
+            background: transparent;
+            color: var(--text-sub);
+            font-weight: 600;
+            font-size: 14px;
+            cursor: pointer;
+            transition: all 0.3s;
+        }
+
+        .tab-btn.active {
+            background: white;
+            color: #667eea;
+            box-shadow: 0 2px 10px rgba(0,0,0,0.05);
+        }
+
+        .category-filters {
+            display: flex;
+            gap: 12px;
+        }
+
+        .cat-tag {
+            padding: 8px 16px;
+            border-radius: 20px;
+            font-size: 13px;
+            font-weight: 500;
+            cursor: pointer;
+            border: 1px solid transparent;
+            transition: all 0.3s;
+            background: rgba(255,255,255,0.5);
+            color: var(--text-sub);
+        }
+
+        .cat-tag:hover, .cat-tag.active {
+            background: white;
+            border-color: #e2e8f0;
+            color: var(--text-main);
+            transform: translateY(-2px);
+        }
+
+        .cat-dot {
+            display: inline-block;
+            width: 8px;
+            height: 8px;
+            border-radius: 50%;
+            margin-right: 6px;
+        }
+
+        /* Task List */
+        .task-list {
+            display: flex;
+            flex-direction: column;
+            gap: 16px;
+            padding-bottom: 50px;
+        }
+
+        .task-card {
+            background: rgba(255,255,255,0.9);
+            border-radius: 16px;
+            padding: 20px 24px;
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+            box-shadow: 0 4px 6px rgba(0,0,0,0.02);
+            transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+            position: relative;
+            overflow: hidden;
+            border: 1px solid white;
+        }
+
+        .task-card::before {
+            content: '';
+            position: absolute;
+            left: 0;
+            top: 0;
+            bottom: 0;
+            width: 6px;
+        }
+
+        .task-card.prio-high::before { background: var(--high-prio); }
+        .task-card.prio-med::before { background: var(--med-prio); }
+        .task-card.prio-low::before { background: var(--low-prio); }
+
+        .task-card:hover {
+            transform: translateY(-4px) scale(1.005);
+            box-shadow: 0 20px 40px rgba(0,0,0,0.08);
+            z-index: 10;
+        }
+
+        .task-left {
+            display: flex;
+            align-items: center;
+            gap: 20px;
+            flex: 1;
+        }
+
+        /* Custom Checkbox */
+        .checkbox-wrapper {
+            position: relative;
+            cursor: pointer;
+            display: flex;
+            align-items: center;
+        }
+
+        .checkbox-wrapper input {
+            display: none;
+        }
+
+        .checkmark {
+            width: 24px;
+            height: 24px;
+            border: 2px solid #cbd5e0;
+            border-radius: 6px;
+            transition: all 0.3s;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            color: white;
+        }
+
+        .checkbox-wrapper:hover .checkmark {
+            border-color: #667eea;
+        }
+
+        .checkbox-wrapper input:checked + .checkmark {
+            background: var(--success);
+            border-color: var(--success);
+        }
+
+        .checkbox-wrapper input:checked + .checkmark::after {
+            content: '\eb7b';
+            font-family: 'remixicon';
+            font-size: 16px;
+        }
+
+        .task-content {
+            display: flex;
+            flex-direction: column;
+            gap: 6px;
+        }
+
+        .task-title {
+            font-size: 18px;
+            font-weight: 600;
+            color: var(--text-main);
+            transition: all 0.3s;
+        }
+
+        .task-meta {
+            display: flex;
+            align-items: center;
+            gap: 15px;
+            font-size: 13px;
+            color: var(--text-sub);
+        }
+
+        .meta-item {
+            display: flex;
+            align-items: center;
+            gap: 4px;
+        }
+
+        .tag {
+            padding: 4px 10px;
+            background: #edf2f7;
+            border-radius: 6px;
+            font-size: 12px;
+            font-weight: 600;
+        }
+
+        .tag.work { background: #ebf8ff; color: #3182ce; }
+        .tag.life { background: #f0fff4; color: #38a169; }
+        .tag.study { background: #fff5f5; color: #e53e3e; }
+
+        .task-right {
+            display: flex;
+            align-items: center;
+            gap: 15px;
+        }
+
+        .delete-btn {
+            width: 36px;
+            height: 36px;
+            border-radius: 10px;
+            border: none;
+            background: #fff5f5;
+            color: #fc8181;
+            cursor: pointer;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-size: 18px;
+            transition: all 0.3s;
+            opacity: 0;
+        }
+
+        .task-card:hover .delete-btn {
+            opacity: 1;
+        }
+
+        .delete-btn:hover {
+            background: #f56565;
+            color: white;
+        }
+
+        /* Completed State */
+        .task-card.completed {
+            opacity: 0.7;
+            background: rgba(255,255,255,0.6);
+        }
+
+        .task-card.completed .task-title {
+            text-decoration: line-through;
+            color: #a0aec0;
+        }
+
+        .task-card.completed::before {
+            background: #cbd5e0;
+        }
+
+        /* Responsive */
+        @media (max-width: 900px) {
+            .stats-grid {
+                grid-template-columns: repeat(2, 1fr);
+            }
+        }
+        
+    </style>
+</head>
+<body>
+
+    <div class="app-container">
+        <!-- Header -->
+        <header>
+            <div class="logo-area">
+                <div class="logo-icon">
+                    <i class="ri-checkbox-multiple-fill"></i>
+                </div>
+                <h1 class="app-title">TaskFlow Pro</h1>
+            </div>
+            <div class="user-profile">
+                <span class="username">Alexander</span>
+                <div class="avatar"></div>
+            </div>
+        </header>
+
+        <!-- Stats Area -->
+        <div class="stats-grid">
+            <div class="stat-card total">
+                <div class="stat-header">
+                    <div class="stat-icon"><i class="ri-stack-line"></i></div>
+                </div>
+                <div class="stat-info">
+                    <h3>总任务数</h3>
+                    <div class="number">128</div>
+                </div>
+            </div>
+            <div class="stat-card pending">
+                <div class="stat-header">
+                    <div class="stat-icon"><i class="ri-time-line"></i></div>
+                </div>
+                <div class="stat-info">
+                    <h3>待处理</h3>
+                    <div class="number">42</div>
+                </div>
+            </div>
+            <div class="stat-card done">
+                <div class="stat-header">
+                    <div class="stat-icon"><i class="ri-checkbox-circle-line"></i></div>
+                </div>
+                <div class="stat-info">
+                    <h3>已完成</h3>
+                    <div class="number">86</div>
+                </div>
+            </div>
+            <div class="stat-card rate">
+                <div class="stat-header">
+                    <div class="stat-icon"><i class="ri-pie-chart-line"></i></div>
+                </div>
+                <div class="stat-info">
+                    <h3>完成率</h3>
+                    <div class="number">67%</div>
+                </div>
+                <div class="progress-circle-container">
+                    <svg viewBox="0 0 36 36" class="circular-chart">
+                        <path class="circle-bg" d="M18 2.0845 a 15.9155 15.9155 0 0 1 0 31.831 a 15.9155 15.9155 0 0 1 0 -31.831" />
+                        <path class="circle" stroke-dasharray="67, 100" d="M18 2.0845 a 15.9155 15.9155 0 0 1 0 31.831 a 15.9155 15.9155 0 0 1 0 -31.831" />
+                        <text x="18" y="20.35" class="percentage">67%</text>
+                    </svg>
+                </div>
+            </div>
+        </div>
+
+        <!-- Smart Input -->
+        <div class="input-section">
+            <div class="input-expanded">
+                <div class="task-input-group" style="width: 100%;">
+                    <label>创建新任务</label>
+                    <input type="text" class="main-input" placeholder="准备做什么？例如：周五下午3点提交设计方案..." autofocus>
+                </div>
+                <div class="controls-row">
+                    <div class="control-item">
+                        <label>优先级</label>
+                        <select class="custom-select">
+                            <option value="high">🔥 高优先级</option>
+                            <option value="medium" selected>⚡ 中优先级</option>
+                            <option value="low">🌱 低优先级</option>
+                        </select>
+                    </div>
+                    <div class="control-item">
+                        <label>分类</label>
+                        <select class="custom-select">
+                            <option value="work">💼 工作</option>
+                            <option value="study">📚 学习</option>
+                            <option value="life">🏠 生活</option>
+                        </select>
+                    </div>
+                    <div class="control-item">
+                        <label>截止日期</label>
+                        <input type="date" class="custom-select" value="2023-11-20">
+                    </div>
+                    <button class="add-btn">
+                        <i class="ri-add-line"></i>
+                        添加任务
+                    </button>
+                </div>
+            </div>
+        </div>
+
+        <!-- Filter Bar -->
+        <div class="filter-bar">
+            <div class="tabs">
+                <button class="tab-btn active">全部</button>
+                <button class="tab-btn">进行中</button>
+                <button class="tab-btn">已完成</button>
+            </div>
+            <div class="category-filters">
+                <div class="cat-tag active"><span class="cat-dot" style="background:#667eea"></span>所有</div>
+                <div class="cat-tag"><span class="cat-dot" style="background:#3182ce"></span>工作</div>
+                <div class="cat-tag"><span class="cat-dot" style="background:#e53e3e"></span>学习</div>
+                <div class="cat-tag"><span class="cat-dot" style="background:#38a169"></span>生活</div>
+            </div>
+        </div>
+
+        <!-- Task List -->
+        <div class="task-list">
+            <!-- Task 1: High Priority -->
+            <div class="task-card prio-high">
+                <div class="task-left">
+                    <label class="checkbox-wrapper">
+                        <input type="checkbox">
+                        <div class="checkmark"></div>
+                    </label>
+                    <div class="task-content">
+                        <div class="task-title">Q4季度UI设计复盘会议</div>
+                        <div class="task-meta">
+                            <span class="tag work">工作</span>
+                            <span class="meta-item"><i class="ri-calendar-event-line"></i> 今天 14:00</span>
+                            <span class="meta-item" style="color: var(--high-prio);"><i class="ri-flag-fill"></i> 高优先级</span>
+                        </div>
+                    </div>
+                </div>
+                <div class="task-right">
+                    <button class="delete-btn"><i class="ri-delete-bin-line"></i></button>
+                </div>
+            </div>
+
+            <!-- Task 2: Medium Priority -->
+            <div class="task-card prio-med">
+                <div class="task-left">
+                    <label class="checkbox-wrapper">
+                        <input type="checkbox">
+                        <div class="checkmark"></div>
+                    </label>
+                    <div class="task-content">
+                        <div class="task-title">整理前端组件库文档</div>
+                        <div class="task-meta">
+                            <span class="tag study">学习</span>
+                            <span class="meta-item"><i class="ri-calendar-line"></i> 明天 10:00</span>
+                            <span class="meta-item" style="color: var(--med-prio);"><i class="ri-flag-fill"></i> 中优先级</span>
+                        </div>
+                    </div>
+                </div>
+                <div class="task-right">
+                    <button class="delete-btn"><i class="ri-delete-bin-line"></i></button>
+                </div>
+            </div>
+
+            <!-- Task 3: Low Priority -->
+            <div class="task-card prio-low">
+                <div class="task-left">
+                    <label class="checkbox-wrapper">
+                        <input type="checkbox">
+                        <div class="checkmark"></div>
+                    </label>
+                    <div class="task-content">
+                        <div class="task-title">购买咖啡豆和牛奶</div>
+                        <div class="task-meta">
+                            <span class="tag life">生活</span>
+                            <span class="meta-item"><i class="ri-calendar-line"></i> 周六</span>
+                            <span class="meta-item" style="color: var(--low-prio);"><i class="ri-flag-fill"></i> 低优先级</span>
+                        </div>
+                    </div>
+                </div>
+                <div class="task-right">
+                    <button class="delete-btn"><i class="ri-delete-bin-line"></i></button>
+                </div>
+            </div>
+
+            <!-- Task 4: Completed -->
+            <div class="task-card completed prio-med">
+                <div class="task-left">
+                    <label class="checkbox-wrapper">
+                        <input type="checkbox" checked>
+                        <div class="checkmark"></div>
+                    </label>
+                    <div class="task-content">
+                        <div class="task-title">更新个人博客服务器配置</div>
+                        <div class="task-meta">
+                            <span class="tag work">其他</span>
+                            <span class="meta-item"><i class="ri-checkbox-circle-line"></i> 已完成</span>
+                        </div>
+                    </div>
+                </div>
+                <div class="task-right">
+                    <button class="delete-btn"><i class="ri-delete-bin-line"></i></button>
+                </div>
+            </div>
+
+            <!-- Task 5: High Priority -->
+            <div class="task-card prio-high">
+                <div class="task-left">
+                    <label class="checkbox-wrapper">
+                        <input type="checkbox">
+                        <div class="checkmark"></div>
+                    </label>
+                    <div class="task-content">
+                        <div class="task-title">准备下周一的产品发布演示</div>
+                        <div class="task-meta">
+                            <span class="tag work">工作</span>
+                            <span class="meta-item"><i class="ri-calendar-event-line"></i> 下周一</span>
+                            <span class="meta-item" style="color: var(--high-prio);"><i class="ri-flag-fill"></i> 高优先级</span>
+                        </div>
+                    </div>
+                </div>
+                <div class="task-right">
+                    <button class="delete-btn"><i class="ri-delete-bin-line"></i></button>
+                </div>
+            </div>
+        </div>
+    </div>
+
+</body>
+</html>

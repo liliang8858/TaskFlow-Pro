@@ -1,34 +1,29 @@
 import { useState, useRef, useEffect } from 'react';
-import { Plus, Calendar, Flag, Tag } from 'lucide-react';
+import { Plus } from 'lucide-react';
 import { useTodos, Priority } from '../context/TodoContext';
-import { Button } from './ui/Button';
-import { Input } from './ui/Input';
 import { cn } from '../lib/utils';
+import { format } from 'date-fns';
 
 export function TodoInput() {
   const { addTodo } = useTodos();
   const [text, setText] = useState('');
   const [priority, setPriority] = useState<Priority>('medium');
-  const [category, setCategory] = useState('个人');
-  const [date, setDate] = useState('');
+  const [category, setCategory] = useState('work');
+  const [date, setDate] = useState(format(new Date(), 'yyyy-MM-dd'));
   const [isExpanded, setIsExpanded] = useState(false);
-  const formRef = useRef<HTMLFormElement>(null);
+  const containerRef = useRef<HTMLDivElement>(null);
 
   const handleSubmit = (e: React.FormEvent) => {
     e.preventDefault();
     if (!text.trim()) return;
-    addTodo(text, priority, category, date || undefined);
+    addTodo(text, priority, category === 'work' ? '工作' : category === 'study' ? '学习' : '生活', date || undefined);
     setText('');
-    setPriority('medium');
-    setDate('');
-    // keep category
     setIsExpanded(false);
   };
 
-  // Click outside to collapse
   useEffect(() => {
     function handleClickOutside(event: MouseEvent) {
-      if (formRef.current && !formRef.current.contains(event.target as Node) && !text.trim()) {
+      if (containerRef.current && !containerRef.current.contains(event.target as Node) && !text.trim()) {
         setIsExpanded(false);
       }
     }
@@ -39,90 +34,93 @@ export function TodoInput() {
   }, [text]);
 
   return (
-    <>
-    {isExpanded && <div className="fixed inset-0 bg-black/5 z-10" />}
-    <form ref={formRef} onSubmit={handleSubmit} className="relative z-20 w-full max-w-2xl mx-auto mb-8">
-      <div className={cn(
-        "bg-card border border-border rounded-2xl shadow-xl transition-all duration-300 overflow-hidden",
-        isExpanded ? "p-4 ring-4 ring-primary/10 scale-105" : "p-3 flex items-center gap-3 hover:shadow-2xl hover:-translate-y-0.5"
-      )}>
-        <div className={cn("transition-all duration-300 text-muted-foreground", isExpanded ? "hidden" : "block pl-2")}>
-             <Plus className="h-6 w-6" />
+    <div 
+      ref={containerRef}
+      className="bg-white/75 backdrop-blur-[20px] rounded-[20px] p-6 shadow-soft mb-8 border border-white/80 transition-all duration-300"
+    >
+      {!isExpanded ? (
+        <div 
+          className="flex items-center gap-4 cursor-pointer"
+          onClick={() => setIsExpanded(true)}
+        >
+          <div className="w-10 h-10 rounded-xl bg-primary-gradient flex items-center justify-center text-white text-2xl shadow-[0_4px_15px_rgba(102,126,234,0.4)]">
+            <Plus className="w-6 h-6" />
+          </div>
+          <div className="text-text-sub text-base flex-grow text-gray-400">
+            准备做什么？例如：周五下午3点提交设计方案...
+          </div>
         </div>
-        
-        <div className="flex-1">
-            <Input
+      ) : (
+        <form onSubmit={handleSubmit} className="flex flex-col gap-5 animate-in fade-in zoom-in-95 duration-200">
+          <div className="flex flex-col gap-2 w-full">
+            <label className="text-xs text-gray-500 font-semibold uppercase tracking-wide ml-1">创建新任务</label>
+            <input 
+              type="text" 
+              className="w-full border-none bg-white/50 p-4 rounded-xl text-lg text-gray-800 outline-none transition-all focus:bg-white focus:shadow-[0_0_0_2px_#667eea] placeholder:text-gray-400"
+              placeholder="准备做什么？例如：周五下午3点提交设计方案..."
+              autoFocus
               value={text}
               onChange={(e) => setText(e.target.value)}
-              onFocus={() => setIsExpanded(true)}
-              placeholder={isExpanded ? "准备做什么？" : "添加新任务..."}
-              className="border-none shadow-none focus-visible:ring-0 text-lg bg-transparent p-0 h-auto placeholder:text-muted-foreground/50 font-medium"
-              autoFocus={isExpanded}
             />
-        </div>
-
-        {isExpanded ? (
-          <div className="flex flex-col gap-4 mt-4 animate-in fade-in slide-in-from-top-2 pt-4 border-t border-border/50">
-            <div className="flex flex-wrap gap-2">
-              <div className="relative group/priority">
-                <select
+          </div>
+          
+          <div className="flex flex-wrap items-end gap-4 w-full">
+            <div className="flex flex-col gap-2 flex-1 min-w-[140px]">
+              <label className="text-xs text-gray-500 font-semibold uppercase tracking-wide ml-1">优先级</label>
+              <div className="relative">
+                <select 
+                  className="appearance-none w-full bg-white border border-slate-200 px-4 py-3 rounded-[10px] text-sm text-gray-700 cursor-pointer focus:outline-none focus:border-primary pr-8"
                   value={priority}
                   onChange={(e) => setPriority(e.target.value as Priority)}
-                  className="absolute inset-0 opacity-0 cursor-pointer z-10"
-                />
-                <Button type="button" variant="outline" size="sm" className={cn(
-                  "gap-1.5 text-xs h-8 font-medium transition-colors",
-                  priority === 'high' && "text-red-600 border-red-200 bg-red-50 hover:bg-red-100",
-                  priority === 'medium' && "text-amber-600 border-amber-200 bg-amber-50 hover:bg-amber-100",
-                  priority === 'low' && "text-emerald-600 border-emerald-200 bg-emerald-50 hover:bg-emerald-100"
-                )}>
-                  <Flag className="h-3.5 w-3.5" />
-                  {priority === 'high' ? '高优先级' : priority === 'medium' ? '中优先级' : '低优先级'}
-                </Button>
-              </div>
-
-              <div className="flex items-center gap-1.5 px-2.5 rounded-md border border-input bg-background h-8">
-                 <Tag className="h-3.5 w-3.5 text-muted-foreground" />
-                 <input 
-                    type="text" 
-                    value={category} 
-                    onChange={e => setCategory(e.target.value)}
-                    className="w-20 text-xs bg-transparent outline-none placeholder:text-muted-foreground"
-                    placeholder="分类"
-                 />
-              </div>
-
-               <div className="relative">
-                <input
-                  type="date"
-                  value={date}
-                  onChange={(e) => setDate(e.target.value)}
-                  className="absolute inset-0 opacity-0 cursor-pointer z-10"
-                />
-                <Button type="button" variant="outline" size="sm" className={cn("gap-1.5 text-xs h-8 font-medium", date && "text-primary border-primary bg-primary/5")}>
-                  <Calendar className="h-3.5 w-3.5" />
-                  {date ? format(new Date(date), 'MMM d') : '截止日期'}
-                </Button>
+                >
+                  <option value="high">🔥 高优先级</option>
+                  <option value="medium">⚡ 中优先级</option>
+                  <option value="low">🌱 低优先级</option>
+                </select>
+                <div className="pointer-events-none absolute inset-y-0 right-0 flex items-center px-2 text-gray-700">
+                  <svg className="fill-current h-4 w-4" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 20 20"><path d="M9.293 12.95l.707.707L15.657 8l-1.414-1.414L10 10.828 5.757 6.586 4.343 8z"/></svg>
+                </div>
               </div>
             </div>
 
-            <div className="flex justify-end gap-2">
-                 <Button type="button" variant="ghost" size="sm" onClick={() => setIsExpanded(false)} className="h-9">取消</Button>
-                 <Button type="submit" size="sm" disabled={!text.trim()} className="h-9 px-6 font-semibold">
-                    添加任务
-                 </Button>
+            <div className="flex flex-col gap-2 flex-1 min-w-[140px]">
+              <label className="text-xs text-gray-500 font-semibold uppercase tracking-wide ml-1">分类</label>
+              <div className="relative">
+                <select 
+                  className="appearance-none w-full bg-white border border-slate-200 px-4 py-3 rounded-[10px] text-sm text-gray-700 cursor-pointer focus:outline-none focus:border-primary pr-8"
+                  value={category}
+                  onChange={(e) => setCategory(e.target.value)}
+                >
+                  <option value="work">💼 工作</option>
+                  <option value="study">📚 学习</option>
+                  <option value="life">🏠 生活</option>
+                </select>
+                <div className="pointer-events-none absolute inset-y-0 right-0 flex items-center px-2 text-gray-700">
+                  <svg className="fill-current h-4 w-4" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 20 20"><path d="M9.293 12.95l.707.707L15.657 8l-1.414-1.414L10 10.828 5.757 6.586 4.343 8z"/></svg>
+                </div>
+              </div>
             </div>
+
+            <div className="flex flex-col gap-2 flex-1 min-w-[140px]">
+              <label className="text-xs text-gray-500 font-semibold uppercase tracking-wide ml-1">截止日期</label>
+              <input 
+                type="date" 
+                className="appearance-none w-full bg-white border border-slate-200 px-4 py-3 rounded-[10px] text-sm text-gray-700 cursor-pointer focus:outline-none focus:border-primary"
+                value={date}
+                onChange={(e) => setDate(e.target.value)}
+              />
+            </div>
+
+            <button 
+              type="submit"
+              className="bg-primary-gradient text-white border-none px-8 py-3 rounded-[10px] text-base font-semibold cursor-pointer shadow-[0_4px_15px_rgba(102,126,234,0.4)] transition-all duration-300 h-[46px] mb-[1px] flex items-center gap-2 hover:-translate-y-0.5 hover:shadow-[0_8px_25px_rgba(102,126,234,0.6)] active:translate-y-0"
+            >
+              <Plus className="w-5 h-5" />
+              添加任务
+            </button>
           </div>
-        ) : (
-            <Button type="submit" size="sm" disabled={!text.trim()} className={cn("rounded-xl h-9 px-4 font-semibold transition-opacity", !text.trim() && "opacity-0")}>
-                添加
-            </Button>
-        )}
-      </div>
-    </form>
-    </>
+        </form>
+      )}
+    </div>
   );
 }
-
-// Helper for date formatting in input
-import { format } from 'date-fns';

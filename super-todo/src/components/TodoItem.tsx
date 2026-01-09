@@ -1,61 +1,111 @@
-import { Check, Trash2, Calendar } from 'lucide-react';
+import { Trash2, Calendar, Flag, Check } from 'lucide-react';
 import { Todo, useTodos } from '../context/TodoContext';
-import { Button } from './ui/Button';
-import { Badge } from './ui/Badge';
 import { cn } from '../lib/utils';
-import { format } from 'date-fns';
+import { format, isToday, isTomorrow } from 'date-fns';
+import { zhCN } from 'date-fns/locale';
 
 export function TodoItem({ todo }: { todo: Todo }) {
   const { toggleTodo, deleteTodo } = useTodos();
 
+  const formatDate = (dateStr?: string) => {
+    if (!dateStr) return '';
+    const date = new Date(dateStr);
+    if (isToday(date)) return `今天 ${format(date, 'HH:mm')}`;
+    if (isTomorrow(date)) return `明天 ${format(date, 'HH:mm')}`;
+    return format(date, 'MM月dd日', { locale: zhCN });
+  };
+
+  const getPriorityLabel = (p: string) => {
+    switch(p) {
+      case 'high': return '高优先级';
+      case 'medium': return '中优先级';
+      case 'low': return '低优先级';
+      default: return '';
+    }
+  };
+
   return (
-    <div className="group flex items-center justify-between p-4 mb-3 bg-card rounded-xl border border-border/50 shadow-sm hover:shadow-md hover:border-primary/20 transition-all duration-200 animate-in fade-in slide-in-from-bottom-2">
-      <div className="flex items-center gap-4 flex-1">
-        <button
-          onClick={() => toggleTodo(todo.id)}
-          className={cn(
-            "h-6 w-6 rounded-full border-2 flex items-center justify-center transition-all duration-200 shrink-0",
-            todo.completed 
-              ? "bg-primary border-primary text-primary-foreground scale-110" 
-              : "border-muted-foreground/50 hover:border-primary hover:scale-110"
-          )}
-        >
-          {todo.completed && <Check className="h-3.5 w-3.5 stroke-[3]" />}
-        </button>
-        
-        <div className="flex flex-col flex-1 min-w-0">
-          <span className={cn(
-            "text-base font-medium transition-all truncate",
-            todo.completed && "text-muted-foreground line-through decoration-muted-foreground decoration-2"
+    <div className={cn(
+      "group bg-white/90 rounded-2xl p-5 flex items-center justify-between shadow-card transition-all duration-300 relative overflow-hidden border border-white hover:-translate-y-1 hover:scale-[1.005] hover:shadow-card-hover hover:z-10",
+      {
+        'opacity-70 bg-white/60': todo.completed,
+      }
+    )}>
+      {/* Priority Indicator Line */}
+      <div className={cn(
+        "absolute left-0 top-0 bottom-0 w-1.5",
+        {
+          'bg-prio-high': todo.priority === 'high',
+          'bg-prio-med': todo.priority === 'medium',
+          'bg-prio-low': todo.priority === 'low',
+          'bg-slate-300': todo.completed
+        }
+      )} />
+
+      <div className="flex items-center gap-5 flex-1 pl-2">
+        <label className="relative cursor-pointer flex items-center group/check">
+          <input 
+            type="checkbox" 
+            className="hidden" 
+            checked={todo.completed}
+            onChange={() => toggleTodo(todo.id)}
+          />
+          <div className={cn(
+            "w-6 h-6 border-2 border-slate-300 rounded-md transition-all duration-300 flex items-center justify-center text-white group-hover/check:border-primary",
+            todo.completed && "bg-success border-success"
+          )}>
+             {todo.completed && <Check className="w-4 h-4" strokeWidth={3} />}
+          </div>
+        </label>
+
+        <div className="flex flex-col gap-1.5">
+          <div className={cn(
+            "text-lg font-semibold text-text-main transition-all duration-300",
+            todo.completed && "line-through text-slate-400"
           )}>
             {todo.text}
-          </span>
-          <div className="flex flex-wrap items-center gap-2 mt-1.5 text-xs text-muted-foreground">
-            <Badge variant={todo.priority} className="uppercase text-[10px] px-2 py-0.5 tracking-wider font-bold">
-              {todo.priority}
-            </Badge>
-            <span className="flex items-center gap-1 px-2 py-0.5 rounded-full bg-secondary text-secondary-foreground font-medium">
-              <span className="w-1.5 h-1.5 rounded-full bg-blue-500" />
+          </div>
+          <div className="flex items-center gap-4 text-[13px] text-text-sub">
+            <span className={cn(
+              "px-2.5 py-1 rounded-md text-xs font-semibold",
+              {
+                'bg-blue-50 text-blue-600': todo.category === '工作',
+                'bg-green-50 text-green-600': todo.category === '生活',
+                'bg-red-50 text-red-600': todo.category === '学习',
+                'bg-slate-100 text-slate-600': !['工作', '生活', '学习'].includes(todo.category)
+              }
+            )}>
               {todo.category}
             </span>
             {todo.dueDate && (
-              <span className="flex items-center gap-1 ml-1 text-xs font-medium">
-                <Calendar className="h-3 w-3" />
-                {format(new Date(todo.dueDate), 'MMM d')}
+              <span className="flex items-center gap-1">
+                <Calendar className="w-3.5 h-3.5" />
+                {formatDate(todo.dueDate)}
               </span>
             )}
+            <span 
+              className="flex items-center gap-1 font-medium"
+              style={{
+                color: todo.priority === 'high' ? 'var(--high-prio)' : 
+                       todo.priority === 'medium' ? 'var(--med-prio)' : 
+                       todo.priority === 'low' ? 'var(--low-prio)' : 'inherit'
+              }}
+            >
+              <Flag className="w-3.5 h-3.5 fill-current" />
+              {getPriorityLabel(todo.priority)}
+            </span>
           </div>
         </div>
       </div>
 
-      <Button
-        variant="ghost"
-        size="icon"
-        onClick={() => deleteTodo(todo.id)}
-        className="opacity-0 group-hover:opacity-100 transition-all duration-200 text-muted-foreground hover:text-destructive hover:bg-destructive/10 ml-2"
-      >
-        <Trash2 className="h-4 w-4" />
-      </Button>
+      <div className="flex items-center gap-4">
+        <button
+          onClick={() => deleteTodo(todo.id)}
+          className="w-9 h-9 rounded-[10px] border-none bg-red-50 text-red-400 cursor-pointer flex items-center justify-center text-lg transition-all duration-300 opacity-0 group-hover:opacity-100 hover:bg-red-500 hover:text-white"
+        >
+          <Trash2 className="w-5 h-5" />
+        </button>
+      </div>
     </div>
   );
 }
